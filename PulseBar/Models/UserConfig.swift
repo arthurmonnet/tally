@@ -37,6 +37,8 @@ struct UserConfig: Codable, Sendable {
     let llmBrowserTitles: [String]
     let remotePushUrl: String?
     let remotePushFrequency: PushFrequency?
+    let onboardingCompleted: Bool
+    let accessibilityGranted: Bool
 
     var isRemotePushEnabled: Bool {
         remotePushUrl != nil && remotePushFrequency != nil
@@ -54,6 +56,8 @@ struct UserConfig: Codable, Sendable {
         case llmBrowserTitles = "llm_browser_titles"
         case remotePushUrl = "remote_push_url"
         case remotePushFrequency = "remote_push_frequency"
+        case onboardingCompleted = "onboarding_completed"
+        case accessibilityGranted = "accessibility_granted"
     }
 
     init(
@@ -67,7 +71,9 @@ struct UserConfig: Codable, Sendable {
         llmApps: [String],
         llmBrowserTitles: [String],
         remotePushUrl: String?,
-        remotePushFrequency: PushFrequency?
+        remotePushFrequency: PushFrequency?,
+        onboardingCompleted: Bool = true,
+        accessibilityGranted: Bool = false
     ) {
         self.codeEditor = codeEditor
         self.screenshotTool = screenshotTool
@@ -80,6 +86,8 @@ struct UserConfig: Codable, Sendable {
         self.llmBrowserTitles = llmBrowserTitles
         self.remotePushUrl = remotePushUrl
         self.remotePushFrequency = remotePushFrequency
+        self.onboardingCompleted = onboardingCompleted
+        self.accessibilityGranted = accessibilityGranted
     }
 
     init(from decoder: Decoder) throws {
@@ -95,6 +103,8 @@ struct UserConfig: Codable, Sendable {
         llmBrowserTitles = try container.decode([String].self, forKey: .llmBrowserTitles)
         remotePushUrl = try container.decodeIfPresent(String.self, forKey: .remotePushUrl)
         remotePushFrequency = try container.decodeIfPresent(PushFrequency.self, forKey: .remotePushFrequency)
+        onboardingCompleted = try container.decodeIfPresent(Bool.self, forKey: .onboardingCompleted) ?? true
+        accessibilityGranted = try container.decodeIfPresent(Bool.self, forKey: .accessibilityGranted) ?? false
     }
 
     static let defaultConfig = UserConfig(

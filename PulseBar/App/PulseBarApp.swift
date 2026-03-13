@@ -11,18 +11,20 @@ struct PulseBarApp: App {
         }
         .menuBarExtraStyle(.window)
 
-        Window("Pulse Setup", id: "setup") {
-            SetupView(isSetupComplete: Binding(
-                get: { appState.isSetupComplete },
-                set: { done in
-                    if done {
-                        appState.isSetupComplete = true
-                        appState.startAll()
-                    }
+        Window("Pulse Setup", id: "onboarding") {
+            OnboardingWindow()
+                .onReceive(NotificationCenter.default.publisher(for: .onboardingCompleted)) { _ in
+                    appState.isSetupComplete = true
+                    appState.startAll()
+                    NSApplication.shared.windows
+                        .first { $0.identifier?.rawValue == "onboarding" }?
+                        .close()
                 }
-            ))
         }
-        .defaultSize(width: 500, height: 600)
+        .windowStyle(.hiddenTitleBar)
+        .windowResizability(.contentSize)
+        .defaultPosition(.center)
+        .defaultSize(width: 480, height: 520)
 
         Window("Pulse API", id: "pulse-api-settings") {
             PulseAPISettingsView(pushScheduler: appState.pushScheduler)
@@ -48,7 +50,7 @@ final class AppState {
 
     init() {
         let config = UserConfig.load()
-        isSetupComplete = config != nil
+        isSetupComplete = config?.onboardingCompleted ?? false
 
         let effectiveConfig = config ?? UserConfig.defaultConfig
         startCollectors(config: effectiveConfig)
