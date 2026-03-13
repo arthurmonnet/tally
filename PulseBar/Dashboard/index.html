@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pulse</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #0a0a0a;
+    color: #e0e0e0;
+    font-family: 'Geist Mono', 'SF Mono', 'Menlo', monospace;
+    font-size: 14px;
+    line-height: 1.6;
+    padding: 40px;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 32px;
+    border-bottom: 1px solid #222;
+    padding-bottom: 16px;
+  }
+
+  .header h1 {
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: #fff;
+  }
+
+  .header .date {
+    color: #666;
+    font-size: 13px;
+  }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+    margin-bottom: 40px;
+    padding: 24px;
+    border: 1px solid #1a1a1a;
+    border-radius: 8px;
+  }
+
+  .stat-item .value {
+    font-size: 28px;
+    font-weight: 700;
+    color: #fff;
+  }
+
+  .stat-item .label {
+    font-size: 11px;
+    color: #666;
+    text-transform: lowercase;
+    margin-top: 2px;
+  }
+
+  .section-title {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #555;
+    margin-bottom: 12px;
+    margin-top: 32px;
+  }
+
+  .app-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+  }
+
+  .app-row .name {
+    width: 120px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 13px;
+  }
+
+  .app-row .bar-bg {
+    flex: 1;
+    height: 8px;
+    background: #1a1a1a;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .app-row .bar-fill {
+    height: 100%;
+    background: #444;
+    border-radius: 4px;
+    transition: width 0.3s ease;
+  }
+
+  .app-row .time {
+    width: 70px;
+    text-align: right;
+    font-size: 13px;
+    color: #888;
+  }
+
+  .git-row, .files-section {
+    margin-bottom: 8px;
+    font-size: 13px;
+    color: #aaa;
+  }
+
+  .file-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+    font-size: 13px;
+  }
+
+  .file-row .ext {
+    width: 50px;
+    color: #888;
+  }
+
+  .file-row .bar-bg {
+    flex: 1;
+    height: 6px;
+    background: #1a1a1a;
+    border-radius: 3px;
+    overflow: hidden;
+    max-width: 200px;
+  }
+
+  .file-row .bar-fill {
+    height: 100%;
+    background: #333;
+    border-radius: 3px;
+  }
+
+  .file-row .count {
+    color: #666;
+    font-size: 12px;
+  }
+
+  .achievements {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-top: 8px;
+  }
+
+  .achievement {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border: 1px solid #222;
+    border-radius: 6px;
+    font-size: 13px;
+  }
+
+  .achievement.new {
+    animation: glow 2s ease-in-out infinite;
+  }
+
+  @keyframes glow {
+    0%, 100% { border-color: #222; }
+    50% { border-color: #555; box-shadow: 0 0 8px rgba(255,255,255,0.05); }
+  }
+
+  .history {
+    display: flex;
+    gap: 4px;
+    align-items: flex-end;
+    height: 60px;
+    margin-top: 8px;
+    padding: 8px 0;
+  }
+
+  .history-bar {
+    flex: 1;
+    background: #222;
+    border-radius: 2px;
+    min-height: 4px;
+    cursor: pointer;
+    transition: background 0.2s;
+    position: relative;
+  }
+
+  .history-bar:hover {
+    background: #444;
+  }
+
+  .history-bar .tooltip {
+    display: none;
+    position: absolute;
+    bottom: calc(100% + 4px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: #333;
+    color: #eee;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    white-space: nowrap;
+  }
+
+  .history-bar:hover .tooltip {
+    display: block;
+  }
+
+  .footer {
+    margin-top: 40px;
+    padding-top: 16px;
+    border-top: 1px solid #1a1a1a;
+    color: #333;
+    font-size: 11px;
+    text-align: center;
+  }
+
+  .loading {
+    color: #333;
+    text-align: center;
+    padding: 40px;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>PULSE</h1>
+  <span class="date" id="date"></span>
+</div>
+
+<div id="content">
+  <div class="loading">Loading...</div>
+</div>
+
+<div class="footer">
+  Auto-refreshes every 30s
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+
+function fmt(n) {
+  return Number(n || 0).toLocaleString();
+}
+
+function fmtDist(m) {
+  if (m >= 1000) return (m / 1000).toFixed(1) + ' km';
+  return Math.round(m) + ' m';
+}
+
+function fmtMin(min) {
+  if (min >= 60) {
+    const h = Math.floor(min / 60);
+    const m = min % 60;
+    return h + 'h ' + m + 'm';
+  }
+  return min + 'm';
+}
+
+function formatDate(d) {
+  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const date = new Date(d || Date.now());
+  return months[date.getMonth()] + ' ' + date.getDate() + ' ' + date.getFullYear();
+}
+
+async function fetchJSON(url) {
+  try {
+    const res = await fetch(url);
+    return await res.json();
+  } catch(e) {
+    console.error('Fetch failed:', url, e);
+    return null;
+  }
+}
+
+async function render() {
+  const [stats, achievements] = await Promise.all([
+    fetchJSON('/api/today'),
+    fetchJSON('/api/achievements')
+  ]);
+
+  if (!stats) {
+    $('content').innerHTML = '<div class="loading">Could not load stats</div>';
+    return;
+  }
+
+  $('date').textContent = formatDate();
+
+  const clicks = (stats.clicksLeft || 0) + (stats.clicksRight || 0);
+  const copyPaste = (stats.copy || 0) + (stats.paste || 0);
+
+  let html = '';
+
+  // Stats grid
+  html += '<div class="stats-grid">';
+  html += statItem(fmt(stats.keystrokes), 'keystrokes');
+  html += statItem(fmt(copyPaste), 'copy/paste');
+  html += statItem(fmt(stats.screenshots), 'screenshots');
+  html += statItem(fmt(clicks), 'clicks');
+  html += statItem(fmt(stats.cmdZ), 'undos');
+  html += statItem(fmt(stats.launcherOpens), 'launcher opens');
+  if (stats.mouseDistanceM > 0) html += statItem(fmtDist(stats.mouseDistanceM), 'mouse travel');
+  if (stats.scrollDistanceM > 0) html += statItem(fmtDist(stats.scrollDistanceM), 'scroll depth');
+  html += '</div>';
+
+  // Top Apps
+  const topApps = (stats.topApps || []).slice(0, 5);
+  if (topApps.length > 0) {
+    const maxMin = Math.max(...topApps.map(a => a.minutes));
+    html += '<div class="section-title">TOP APPS</div>';
+    for (const app of topApps) {
+      const pct = maxMin > 0 ? (app.minutes / maxMin * 100) : 0;
+      html += `<div class="app-row">
+        <span class="name">${app.name}</span>
+        <div class="bar-bg"><div class="bar-fill" style="width:${pct}%"></div></div>
+        <span class="time">${fmtMin(app.minutes)}</span>
+      </div>`;
+    }
+  }
+
+  // Git
+  if (stats.gitCommits > 0 || stats.gitStashes > 0) {
+    html += '<div class="section-title">GIT</div>';
+    html += `<div class="git-row">${stats.gitCommits} commits &middot; ${stats.gitStashes} stashes</div>`;
+  }
+
+  // Files Created
+  const files = stats.filesCreated || {};
+  const fileEntries = Object.entries(files).sort((a, b) => b[1] - a[1]).slice(0, 6);
+  if (fileEntries.length > 0) {
+    const maxFiles = Math.max(...fileEntries.map(e => e[1]));
+    html += '<div class="section-title">FILES CREATED</div>';
+    html += '<div class="files-section">';
+    for (const [ext, count] of fileEntries) {
+      const pct = maxFiles > 0 ? (count / maxFiles * 100) : 0;
+      html += `<div class="file-row">
+        <span class="ext">.${ext}</span>
+        <div class="bar-bg"><div class="bar-fill" style="width:${pct}%"></div></div>
+        <span class="count">${count}</span>
+      </div>`;
+    }
+    html += '</div>';
+  }
+
+  // Achievements
+  if (achievements && achievements.length > 0) {
+    html += '<div class="section-title">ACHIEVEMENTS</div>';
+    html += '<div class="achievements">';
+    for (const a of achievements) {
+      const isNew = a.unlocked_at && isToday(a.unlocked_at);
+      html += `<div class="achievement ${isNew ? 'new' : ''}">${a.id.replace(/_/g, ' ')}</div>`;
+    }
+    html += '</div>';
+  }
+
+  $('content').innerHTML = html;
+}
+
+function statItem(value, label) {
+  return `<div class="stat-item"><div class="value">${value}</div><div class="label">${label}</div></div>`;
+}
+
+function isToday(dateStr) {
+  const today = new Date().toISOString().slice(0, 10);
+  return dateStr.startsWith(today);
+}
+
+// Initial render + auto-refresh
+render();
+setInterval(render, 30000);
+</script>
+</body>
+</html>

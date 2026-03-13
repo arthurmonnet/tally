@@ -1,0 +1,183 @@
+import Foundation
+
+struct PushResult: Sendable {
+    let success: Bool
+    let timestamp: Date
+    let errorMessage: String?
+    let httpStatusCode: Int?
+
+    static func ok() -> PushResult {
+        PushResult(success: true, timestamp: Date(), errorMessage: nil, httpStatusCode: 200)
+    }
+
+    static func failure(_ message: String, statusCode: Int? = nil) -> PushResult {
+        PushResult(success: false, timestamp: Date(), errorMessage: message, httpStatusCode: statusCode)
+    }
+
+    var timeAgoString: String {
+        let seconds = Int(Date().timeIntervalSince(timestamp))
+        if seconds < 60 { return "just now" }
+        let minutes = seconds / 60
+        if minutes < 60 { return "\(minutes)m ago" }
+        let hours = minutes / 60
+        return "\(hours)h ago"
+    }
+}
+
+struct RemotePush: Sendable {
+    private let statsEngine = StatsEngine()
+
+    func pushDailySummary(url: String, token: String) async -> PushResult {
+        // Validate URL
+        guard let endpoint = URL(string: url),
+              let scheme = endpoint.scheme?.lowercased(),
+              let host = endpoint.host?.lowercased() else {
+            return .failure("Invalid URL")
+        }
+
+        // Require HTTPS (except localhost for development)
+        let isLocalhost = host == "localhost" || host == "127.0.0.1"
+        if scheme != "https" && !isLocalhost {
+            return .failure("HTTPS is required (except for localhost)")
+        }
+
+        // Build payload
+        let payload: RemotePushPayload
+        do {
+            payload = try buildPayload()
+        } catch {
+            return .failure("Failed to build stats: \(error.localizedDescription)")
+        }
+
+        let body: Data
+        do {
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+            body = try encoder.encode(payload)
+        } catch {
+            return .failure("Failed to encode payload: \(error.localizedDescription)")
+        }
+
+        // Attempt push with one retry
+        for attempt in 1...2 {
+            let result = await sendRequest(endpoint: endpoint, token: token, body: body)
+            if result.success {
+                return result
+            }
+
+            if attempt == 1 {
+                try? await Task.sleep(nanoseconds: 5_000_000_000)
+            } else {
+                return result
+            }
+        }
+
+        return .failure("Push failed after retry")
+    }
+
+    private func sendRequest(endpoint: URL, token: String, body: Data) async -> PushResult {
+        var request = URLRequest(url: endpoint)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.httpBody = body
+        request.timeoutInterval = 30
+
+        do {
+            let (_, response) = try await URLSession.shared.data(for: request)
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                return .failure("Invalid server response")
+            }
+
+            if (200...299).contains(httpResponse.statusCode) {
+                return .ok()
+            }
+
+            return .failure("Server returned \(httpResponse.statusCode)", statusCode: httpResponse.statusCode)
+        } catch {
+            return .failure(error.localizedDescription)
+        }
+    }
+
+    private func buildPayload() throws -> RemotePushPayload {
+        let stats = try statsEngine.todayStats()
+        let funLine = try statsEngine.generateFunLine()
+        let db = Database.shared
+        let achievements = try db.unlockedAchievements()
+        let todayAchievements = achievements
+            .filter { $0.unlockedAt.hasPrefix(db.todayDateString()) }
+            .map(\.id)
+
+        return RemotePushPayload(
+            version: 1,
+            date: db.todayDateString(),
+            keystrokes: stats.keystrokes,
+            clicks: stats.clicksLeft + stats.clicksRight,
+            copyPaste: stats.copy + stats.paste,
+            screenshots: stats.screenshots,
+            cmdZ: stats.cmdZ,
+            launcherOpens: stats.launcherOpens,
+            appSwitches: stats.appSwitches,
+            scrollDistanceM: stats.scrollDistanceM,
+            mouseDistanceM: stats.mouseDistanceM,
+            darkModeMinutes: stats.darkModeM,
+            lightModeMinutes: stats.lightModeM,
+            topApps: stats.topApps,
+            filesCreated: stats.filesCreated,
+            filesDeleted: stats.filesDeleted,
+            gitCommits: stats.gitCommits,
+            gitStashes: stats.gitStashes,
+            peakRamGb: stats.peakRamGb,
+            activeHours: Double(stats.keystrokes > 0 ? 8 : 0),
+            achievementsUnlocked: todayAchievements,
+            funLine: funLine
+        )
+    }
+}
+
+struct RemotePushPayload: Codable, Sendable {
+    let version: Int
+    let date: String
+    let keystrokes: Int64
+    let clicks: Int64
+    let copyPaste: Int64
+    let screenshots: Int64
+    let cmdZ: Int64
+    let launcherOpens: Int64
+    let appSwitches: Int64
+    let scrollDistanceM: Double
+    let mouseDistanceM: Double
+    let darkModeMinutes: Int64
+    let lightModeMinutes: Int64
+    let topApps: [AppTimeEntry]
+    let filesCreated: [String: Int64]
+    let filesDeleted: Int64
+    let gitCommits: Int64
+    let gitStashes: Int64
+    let peakRamGb: Double
+    let activeHours: Double
+    let achievementsUnlocked: [String]
+    let funLine: String
+
+    enum CodingKeys: String, CodingKey {
+        case version, date, keystrokes, clicks, screenshots
+        case copyPaste = "copy_paste"
+        case cmdZ = "cmd_z"
+        case launcherOpens = "launcher_opens"
+        case appSwitches = "app_switches"
+        case scrollDistanceM = "scroll_distance_m"
+        case mouseDistanceM = "mouse_distance_m"
+        case darkModeMinutes = "dark_mode_minutes"
+        case lightModeMinutes = "light_mode_minutes"
+        case topApps = "top_apps"
+        case filesCreated = "files_created"
+        case filesDeleted = "files_deleted"
+        case gitCommits = "git_commits"
+        case gitStashes = "git_stashes"
+        case peakRamGb = "peak_ram_gb"
+        case activeHours = "active_hours"
+        case achievementsUnlocked = "achievements_unlocked"
+        case funLine = "fun_line"
+    }
+}
