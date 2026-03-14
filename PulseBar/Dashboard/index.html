@@ -52,6 +52,17 @@
     border-radius: 8px;
   }
 
+  .stat-item {
+    cursor: pointer;
+    transition: background 0.2s;
+    padding: 8px;
+    border-radius: 6px;
+  }
+
+  .stat-item:hover {
+    background: rgba(255,255,255,0.03);
+  }
+
   .stat-item .value {
     font-size: 28px;
     font-weight: 700;
@@ -63,6 +74,65 @@
     color: #666;
     text-transform: lowercase;
     margin-top: 2px;
+  }
+
+  .stat-item .spark {
+    display: none;
+    align-items: flex-end;
+    gap: 3px;
+    height: 48px;
+    margin-top: 10px;
+  }
+
+  .stat-item.expanded .spark {
+    display: flex;
+  }
+
+  .stat-item .spark .bar {
+    flex: 1;
+    background: rgba(255,255,255,0.2);
+    border-radius: 2px;
+    min-height: 2px;
+    transition: height 0.3s ease;
+    position: relative;
+  }
+
+  .stat-item .spark .bar.today {
+    background: rgba(255,255,255,0.6);
+  }
+
+  .stat-item .spark .bar:hover {
+    background: rgba(255,255,255,0.5);
+  }
+
+  .stat-item .spark .bar .tip {
+    display: none;
+    position: absolute;
+    bottom: calc(100% + 4px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: #333;
+    color: #eee;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 9px;
+    white-space: nowrap;
+    z-index: 10;
+  }
+
+  .stat-item .spark .bar:hover .tip {
+    display: block;
+  }
+
+  .stat-item .spark-summary {
+    display: none;
+    font-size: 10px;
+    color: #555;
+    margin-top: 6px;
+  }
+
+  .stat-item.expanded .spark-summary {
+    display: block;
   }
 
   .section-title {
@@ -177,6 +247,73 @@
     50% { border-color: #555; box-shadow: 0 0 8px rgba(255,255,255,0.05); }
   }
 
+  /* Window count chart */
+  .window-section {
+    margin-top: 32px;
+    padding: 24px;
+    border: 1px solid #1a1a1a;
+    border-radius: 8px;
+  }
+
+  .window-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 16px;
+  }
+
+  .window-header .title {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #555;
+  }
+
+  .window-header .current {
+    font-size: 20px;
+    font-weight: 700;
+    color: #fff;
+  }
+
+  .window-chart {
+    height: 120px;
+    position: relative;
+  }
+
+  .window-chart svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  .window-chart .area {
+    fill: rgba(255,255,255,0.05);
+  }
+
+  .window-chart .line {
+    fill: none;
+    stroke: rgba(255,255,255,0.5);
+    stroke-width: 1.5;
+  }
+
+  .window-chart .now-dot {
+    fill: rgba(255,255,255,0.8);
+  }
+
+  .window-time-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    color: #444;
+    margin-top: 4px;
+  }
+
+  .window-summary {
+    font-size: 11px;
+    color: #555;
+    margin-top: 8px;
+  }
+
   .history {
     display: flex;
     gap: 4px;
@@ -276,6 +413,12 @@ function formatDate(d) {
   return months[date.getMonth()] + ' ' + date.getDate() + ' ' + date.getFullYear();
 }
 
+function shortDate(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00');
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return months[d.getMonth()] + ' ' + d.getDate();
+}
+
 async function fetchJSON(url) {
   try {
     const res = await fetch(url);
@@ -284,6 +427,58 @@ async function fetchJSON(url) {
     console.error('Fetch failed:', url, e);
     return null;
   }
+}
+
+// Track which stat is expanded
+let expandedStatKey = null;
+
+// Stat key mappings for history API
+const statKeyMap = {
+  'keystrokes': 'keystrokes',
+  'copy/paste': 'copy_paste',
+  'screenshots': 'screenshots',
+  'clicks': 'clicks',
+  'undos': 'cmd_z',
+  'launcher opens': 'launcher_opens',
+  'mouse travel': 'mouse_distance_m',
+  'scroll depth': 'scroll_distance_m',
+};
+
+async function toggleStat(label) {
+  const apiKey = statKeyMap[label];
+  if (!apiKey) return;
+
+  if (expandedStatKey === label) {
+    expandedStatKey = null;
+    document.querySelectorAll('.stat-item').forEach(el => el.classList.remove('expanded'));
+    return;
+  }
+
+  expandedStatKey = label;
+  document.querySelectorAll('.stat-item').forEach(el => el.classList.remove('expanded'));
+
+  const el = document.querySelector(`.stat-item[data-label="${label}"]`);
+  if (!el) return;
+
+  const sparkEl = el.querySelector('.spark');
+  const summaryEl = el.querySelector('.spark-summary');
+
+  // Fetch history
+  const history = await fetchJSON(`/api/stat/${apiKey}/history?days=14`);
+  if (!history || !history.days) return;
+
+  el.classList.add('expanded');
+
+  const max = Math.max(...history.days.map(d => d.value), 1);
+  sparkEl.innerHTML = history.days.map((d, i) => {
+    const h = Math.max((d.value / max) * 100, 2);
+    const isToday = i === history.days.length - 1;
+    return `<div class="bar ${isToday ? 'today' : ''}" style="height:${h}%"><div class="tip">${shortDate(d.date)}: ${fmt(d.value)}</div></div>`;
+  }).join('');
+
+  const pct = history.today_vs_average;
+  const pctStr = pct >= 0 ? `+${Math.round(pct * 100)}%` : `${Math.round(pct * 100)}%`;
+  summaryEl.textContent = `avg ${fmt(Math.round(history.average))} \u00B7 peak ${fmt(history.peak.value)} (${shortDate(history.peak.date)}) \u00B7 today ${pctStr}`;
 }
 
 async function render() {
@@ -304,7 +499,7 @@ async function render() {
 
   let html = '';
 
-  // Stats grid
+  // Stats grid with clickable cards
   html += '<div class="stats-grid">';
   html += statItem(fmt(stats.keystrokes), 'keystrokes');
   html += statItem(fmt(copyPaste), 'copy/paste');
@@ -315,6 +510,9 @@ async function render() {
   if (stats.mouseDistanceM > 0) html += statItem(fmtDist(stats.mouseDistanceM), 'mouse travel');
   if (stats.scrollDistanceM > 0) html += statItem(fmtDist(stats.scrollDistanceM), 'scroll depth');
   html += '</div>';
+
+  // Window count chart
+  html += '<div id="windowSection"></div>';
 
   // Top Apps
   const topApps = (stats.topApps || []).slice(0, 5);
@@ -367,15 +565,93 @@ async function render() {
   }
 
   $('content').innerHTML = html;
+
+  // Load window chart after DOM is ready
+  loadWindowChart();
 }
 
 function statItem(value, label) {
-  return `<div class="stat-item"><div class="value">${value}</div><div class="label">${label}</div></div>`;
+  const hasHistory = !!statKeyMap[label];
+  const clickAttr = hasHistory ? `onclick="toggleStat('${label}')"` : '';
+  return `<div class="stat-item" data-label="${label}" ${clickAttr}>
+    <div class="value">${value}</div>
+    <div class="label">${label}</div>
+    <div class="spark"></div>
+    <div class="spark-summary"></div>
+  </div>`;
 }
 
 function isToday(dateStr) {
   const today = new Date().toISOString().slice(0, 10);
   return dateStr.startsWith(today);
+}
+
+async function loadWindowChart() {
+  const section = document.getElementById('windowSection');
+  if (!section) return;
+
+  const data = await fetchJSON('/api/stat/window_count/timeline');
+  if (!data || !data.points || data.points.length === 0) {
+    section.innerHTML = '';
+    return;
+  }
+
+  const points = data.points;
+  const summary = data.summary || {};
+  const max = Math.max(...points.map(p => p.value), 1);
+
+  // Build SVG polyline
+  const svgW = points.length;
+  const svgH = 100;
+  const padding = 5;
+  const usableH = svgH - padding * 2;
+
+  const linePoints = points.map((p, i) => {
+    const x = points.length > 1 ? (i / (points.length - 1)) * svgW : svgW / 2;
+    const y = padding + usableH - (p.value / max) * usableH;
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(' ');
+
+  const areaPoints = `0,${svgH} ${linePoints} ${svgW},${svgH}`;
+
+  // Last point for "now" dot
+  const lastX = svgW;
+  const lastY = padding + usableH - (points[points.length - 1].value / max) * usableH;
+
+  // Time labels: pick ~6 evenly spaced labels
+  const labelCount = Math.min(6, points.length);
+  const step = Math.floor(points.length / labelCount);
+  let timeLabels = '';
+  for (let i = 0; i < points.length; i += step) {
+    const t = points[i].time;
+    // Convert 24h to 12h
+    const parts = t.split(':');
+    const h = parseInt(parts[0]);
+    const ampm = h >= 12 ? 'pm' : 'am';
+    const h12 = h === 0 ? 12 : (h > 12 ? h - 12 : h);
+    timeLabels += `<span>${h12}${ampm}</span>`;
+  }
+
+  const peak = summary.peak || {};
+  const min = summary.min || {};
+  const summaryLine = `avg: ${summary.average || 0} \u00B7 peak: ${peak.value || 0} (${peak.time || ''}) \u00B7 min: ${min.value || 0} (${min.time || ''})`;
+
+  section.innerHTML = `
+    <div class="window-section">
+      <div class="window-header">
+        <span class="title">OPEN WINDOWS</span>
+        <span class="current">${summary.current || 0}</span>
+      </div>
+      <div class="window-chart">
+        <svg viewBox="0 0 ${svgW} ${svgH}" preserveAspectRatio="none">
+          <polygon class="area" points="${areaPoints}"/>
+          <polyline class="line" points="${linePoints}"/>
+          <circle class="now-dot" cx="${lastX}" cy="${lastY}" r="2"/>
+        </svg>
+      </div>
+      <div class="window-time-labels">${timeLabels}</div>
+      <div class="window-summary">${summaryLine}</div>
+    </div>`;
 }
 
 // Initial render + auto-refresh

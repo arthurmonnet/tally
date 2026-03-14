@@ -6,9 +6,21 @@ struct StatsEngine: Sendable {
     func todayStats() throws -> DailyStats {
         let raw = try db.todayStats()
 
+        // Build displayName → bundleID map from app_bundle entries
+        var bundleMap: [String: String] = [:]
+        for key in raw.keys where key.hasPrefix("app_bundle:") {
+            let rest = String(key.dropFirst("app_bundle:".count))
+            if let colonIdx = rest.lastIndex(of: ":") {
+                let name = String(rest[rest.startIndex..<colonIdx])
+                let bundleID = String(rest[rest.index(after: colonIdx)...])
+                bundleMap[name] = bundleID
+            }
+        }
+
         let topApps = raw
             .filter { $0.key.hasPrefix("app_time:") }
             .map { AppTimeEntry(name: String($0.key.dropFirst("app_time:".count)), minutes: $0.value.int) }
+            .filter { AppFilter.shouldDisplay(name: $0.name, bundleID: bundleMap[$0.name]) }
             .sorted { $0.minutes > $1.minutes }
 
         let filesCreated = raw
@@ -42,6 +54,41 @@ struct StatsEngine: Sendable {
             topApps: topApps,
             filesCreated: filesCreated
         )
+    }
+
+    // MARK: - Stat History
+
+    func history(for statKeys: [String], days: Int = 7) throws -> StatHistory {
+        let dayData = try db.statHistoryByDay(statKeys: statKeys, days: days)
+
+        let values = dayData.map(\.value)
+        let total = values.reduce(0, +)
+        let nonZeroCount = values.filter { $0 > 0 }.count
+        let average = nonZeroCount > 0 ? Double(total) / Double(nonZeroCount) : 0
+
+        var peakDate = ""
+        var peakValue: Int64 = 0
+        for day in dayData {
+            if day.value > peakValue {
+                peakValue = day.value
+                peakDate = day.date
+            }
+        }
+
+        let todayValue = dayData.last?.value ?? 0
+        let todayVsAverage = average > 0 ? (Double(todayValue) - average) / average : 0
+
+        return StatHistory(
+            keys: statKeys,
+            days: dayData.map { StatHistoryDay(date: $0.date, value: $0.value) },
+            average: average,
+            peak: StatHistoryPeak(date: peakDate, value: peakValue),
+            todayVsAverage: todayVsAverage
+        )
+    }
+
+    func history(for statKey: String, days: Int = 7) throws -> StatHistory {
+        return try history(for: [statKey], days: days)
     }
 
     func todayStatsJSON() throws -> String {
@@ -100,6 +147,34 @@ struct StatsEngine: Sendable {
         formatter.numberStyle = .decimal
         return formatter.string(from: NSNumber(value: n)) ?? "\(n)"
     }
+}
+
+// MARK: - History Types
+
+struct StatHistory: Codable, Sendable {
+    let keys: [String]
+    let days: [StatHistoryDay]
+    let average: Double
+    let peak: StatHistoryPeak
+    let todayVsAverage: Double
+
+    enum CodingKeys: String, CodingKey {
+        case keys = "stat"
+        case days
+        case average
+        case peak
+        case todayVsAverage = "today_vs_average"
+    }
+}
+
+struct StatHistoryDay: Codable, Sendable {
+    let date: String
+    let value: Int64
+}
+
+struct StatHistoryPeak: Codable, Sendable {
+    let date: String
+    let value: Int64
 }
 
 extension DailyStats {
