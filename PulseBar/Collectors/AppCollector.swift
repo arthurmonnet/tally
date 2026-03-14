@@ -12,6 +12,7 @@ final class AppCollector {
     private var appSwitchCount: Int64 = 0
     private var appTimeBuckets: [String: TimeInterval] = [:]
     private var nopeApps: [String: Int64] = [:]
+    private var appBundleIDs: [String: String] = [:]  // displayName → bundleID
 
     private let db = Database.shared
 
@@ -20,6 +21,10 @@ final class AppCollector {
         if let frontApp = NSWorkspace.shared.frontmostApplication {
             activeAppName = frontApp.localizedName ?? "Unknown"
             activeAppStartTime = Date()
+            if let bundleID = frontApp.bundleIdentifier,
+               let name = frontApp.localizedName {
+                appBundleIDs[name] = bundleID
+            }
         }
 
         activationObserver = NSWorkspace.shared.notificationCenter.addObserver(
@@ -78,6 +83,11 @@ final class AppCollector {
         activeAppName = appName
         activeAppStartTime = now
         appSwitchCount += 1
+
+        // Capture bundle ID
+        if let bundleID = app.bundleIdentifier {
+            appBundleIDs[appName] = bundleID
+        }
     }
 
     private func recordActiveAppDuration() {
@@ -110,6 +120,11 @@ final class AppCollector {
             events.append((statKey: "app_nope:\(appName)", valueInt: count, valueFloat: 0.0))
         }
         nopeApps.removeAll()
+
+        // Store bundle ID mappings (valueInt=1 is a marker, the key encodes the mapping)
+        for (appName, bundleID) in appBundleIDs {
+            events.append((statKey: "app_bundle:\(appName):\(bundleID)", valueInt: 1, valueFloat: 0.0))
+        }
 
         guard !events.isEmpty else { return }
 

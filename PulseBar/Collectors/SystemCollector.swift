@@ -1,5 +1,6 @@
 import Foundation
 import AppKit
+import CoreGraphics
 
 @MainActor
 final class SystemCollector {
@@ -38,7 +39,7 @@ final class SystemCollector {
             self?.handleWake()
         }
 
-        // Poll every 60 seconds for RAM + dark mode
+        // Poll every 60 seconds for RAM + dark mode + window count
         pollTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
             Task { @MainActor in
                 self?.poll()
@@ -104,6 +105,17 @@ final class SystemCollector {
             counters["active_after_midnight_m", default: 0] += 1  // 1 minute per poll
         }
 
+        // Window count (snapshot stat — uses setEvent, not upsert)
+        let windowCount = countVisibleWindows()
+        if windowCount > 0 {
+            let bucket = windowCountBucket()
+            do {
+                try db.setEvent(bucket: bucket, statKey: "window_count", valueInt: Int64(windowCount))
+            } catch {
+                print("[SystemCollector] Failed to store window count: \(error)")
+            }
+        }
+
         flush()
     }
 
@@ -137,6 +149,41 @@ final class SystemCollector {
             print("[SystemCollector] Failed to flush: \(error)")
         }
     }
+
+    // MARK: - Window Count
+
+    private func countVisibleWindows() -> Int {
+        guard let windowList = CGWindowListCopyWindowInfo(
+            [.optionOnScreenOnly, .excludeDesktopElements],
+            kCGNullWindowID
+        ) as? [[String: Any]] else { return 0 }
+
+        return windowList.filter { info in
+            // Only count regular windows (layer 0), filter out tiny windows (<100px)
+            let layer = info[kCGWindowLayer as String] as? Int ?? -1
+            guard layer == 0 else { return false }
+            guard let bounds = info[kCGWindowBounds as String] as? [String: Any],
+                  let height = bounds["Height"] as? Int else { return false }
+            return height > 100
+        }.count
+    }
+
+    /// 1-minute bucket for window count (finer granularity than the standard 5-min bucket)
+    private func windowCountBucket() -> String {
+        let now = Date()
+        let calendar = Calendar.current
+        let components = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: now)
+        return String(
+            format: "%04d-%02d-%02dT%02d:%02d:00",
+            components.year ?? 2026,
+            components.month ?? 1,
+            components.day ?? 1,
+            components.hour ?? 0,
+            components.minute ?? 0
+        )
+    }
+
+    // MARK: - System Info
 
     private var isDarkMode: Bool {
         UserDefaults.standard.string(forKey: "AppleInterfaceStyle") == "Dark"

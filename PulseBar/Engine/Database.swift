@@ -148,6 +148,95 @@ final class Database: Sendable {
         }
     }
 
+    // MARK: - Stat History by Day
+
+    func statHistoryByDay(statKeys: [String], days: Int) throws -> [(date: String, value: Int64)] {
+        let calendar = Calendar.current
+        let today = Date()
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+
+        // Calculate the start date
+        guard let startDate = calendar.date(byAdding: .day, value: -(days - 1), to: today) else {
+            return []
+        }
+        let startDateStr = formatter.string(from: startDate)
+
+        // Build query for one or more stat keys
+        let placeholders = statKeys.map { _ in "?" }.joined(separator: ", ")
+        let sql = """
+            SELECT substr(bucket, 1, 10) as day, SUM(value_int) as total
+            FROM events
+            WHERE stat_key IN (\(placeholders)) AND substr(bucket, 1, 10) >= ?
+            GROUP BY day
+            ORDER BY day
+        """
+        var args: [any DatabaseValueConvertible] = statKeys.map { $0 as any DatabaseValueConvertible }
+        args.append(startDateStr)
+
+        let rows = try dbPool.read { db in
+            try Row.fetchAll(db, sql: sql, arguments: StatementArguments(args))
+        }
+
+        // Build a lookup from query results
+        var resultMap: [String: Int64] = [:]
+        for row in rows {
+            let day: String = row["day"]
+            let total: Int64 = row["total"]
+            resultMap[day] = total
+        }
+
+        // Fill all days (including missing ones as 0)
+        var result: [(date: String, value: Int64)] = []
+        for offset in 0..<days {
+            guard let date = calendar.date(byAdding: .day, value: -(days - 1 - offset), to: today) else { continue }
+            let dateStr = formatter.string(from: date)
+            result.append((date: dateStr, value: resultMap[dateStr] ?? 0))
+        }
+
+        return result
+    }
+
+    // MARK: - Timeline Buckets (for intraday time-series like window_count)
+
+    func timelineBuckets(statKey: String, date: String) throws -> [(time: String, value: Int64)] {
+        return try dbPool.read { db in
+            let rows = try Row.fetchAll(
+                db,
+                sql: """
+                    SELECT bucket, value_int
+                    FROM events
+                    WHERE stat_key = ? AND substr(bucket, 1, 10) = ?
+                    ORDER BY bucket
+                """,
+                arguments: [statKey, date]
+            )
+            return rows.map { row in
+                let bucket: String = row["bucket"]
+                // Extract time portion (HH:MM) from bucket like "2026-03-14T09:15:00"
+                let time = bucket.count > 11 ? String(bucket.suffix(from: bucket.index(bucket.startIndex, offsetBy: 11)).prefix(5)) : bucket
+                let value: Int64 = row["value_int"]
+                return (time: time, value: value)
+            }
+        }
+    }
+
+    // MARK: - Set Event (for snapshot stats like window_count, non-cumulative)
+
+    func setEvent(bucket: String, statKey: String, valueInt: Int64) throws {
+        try dbPool.write { db in
+            try db.execute(
+                sql: """
+                    INSERT INTO events (bucket, stat_key, value_int, value_float)
+                    VALUES (?, ?, ?, 0.0)
+                    ON CONFLICT(bucket, stat_key) DO UPDATE SET
+                        value_int = excluded.value_int
+                """,
+                arguments: [bucket, statKey, valueInt]
+            )
+        }
+    }
+
     // MARK: - History
 
     func historyDays(limit: Int = 30) throws -> [DailySummary] {
