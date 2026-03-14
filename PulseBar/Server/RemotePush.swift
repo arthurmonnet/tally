@@ -24,12 +24,61 @@ struct PushResult: Sendable {
     }
 }
 
+enum ConnectionResult {
+    case success
+    case error(String)
+}
+
 struct RemotePush: Sendable {
     private let statsEngine = StatsEngine()
 
+    // MARK: - URL Normalization
+
+    static func normalizeURL(_ input: String) -> String {
+        var url = input.trimmingCharacters(in: .whitespacesAndNewlines)
+        while url.hasSuffix("/") { url = String(url.dropLast()) }
+        if url.hasSuffix("/api/pulse") {
+            url = String(url.dropLast("/api/pulse".count))
+        }
+        return url
+    }
+
+    // MARK: - Test Connection
+
+    func testConnection(url: String, token: String) async -> ConnectionResult {
+        let baseURL = Self.normalizeURL(url)
+        guard let endpoint = URL(string: baseURL + "/api/pulse") else {
+            return .error("Invalid URL")
+        }
+
+        var request = URLRequest(url: endpoint)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.httpBody = "{\"test\":true}".data(using: .utf8)
+        request.timeoutInterval = 10
+
+        do {
+            let (_, response) = try await URLSession.shared.data(for: request)
+            let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+
+            switch status {
+            case 200...299: return .success
+            case 401: return .error("Wrong token. Check that it matches your Vercel env var.")
+            case 404: return .error("Endpoint not found. Make sure the URL is correct.")
+            default: return .error("Unexpected response: \(status)")
+            }
+        } catch {
+            return .error("Can't reach the server. Is the URL correct?")
+        }
+    }
+
+    // MARK: - Push
+
     func pushDailySummary(url: String, token: String) async -> PushResult {
-        // Validate URL
-        guard let endpoint = URL(string: url),
+        // Normalize and build endpoint URL
+        let baseURL = Self.normalizeURL(url)
+        guard let endpoint = URL(string: baseURL + "/api/pulse"),
               let scheme = endpoint.scheme?.lowercased(),
               let host = endpoint.host?.lowercased() else {
             return .failure("Invalid URL")
