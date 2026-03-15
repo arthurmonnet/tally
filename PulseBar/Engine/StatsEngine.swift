@@ -19,8 +19,9 @@ struct StatsEngine: Sendable {
 
         let topApps = raw
             .filter { $0.key.hasPrefix("app_time:") }
-            .map { AppTimeEntry(name: String($0.key.dropFirst("app_time:".count)), minutes: $0.value.int) }
+            .map { AppTimeEntry(name: String($0.key.dropFirst("app_time:".count)), minutes: $0.value.int / 60) }
             .filter { AppFilter.shouldDisplay(name: $0.name, bundleID: bundleMap[$0.name]) }
+            .filter { $0.minutes > 0 }
             .sorted { $0.minutes > $1.minutes }
 
         let filesCreated = raw
