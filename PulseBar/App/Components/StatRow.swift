@@ -25,22 +25,28 @@ struct StatRow: View {
                     .foregroundStyle(.secondary)
                     .frame(width: 16, alignment: .center)
             }
-            Text(label)
-                .font(.system(size: 13))
-                .foregroundStyle(.primary)
+
+            HStack(spacing: 3) {
+                Text(label)
+                    .font(.system(size: 13))
+                    .foregroundStyle(.primary)
+
+                if expandable {
+                    Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
+                        .font(.system(size: 8, weight: .semibold))
+                        .foregroundStyle(.tertiary)
+                }
+            }
+
             Spacer()
+
             Text(value)
                 .font(.system(size: 13, weight: .medium))
                 .monospacedDigit()
                 .foregroundStyle(.primary)
-            if expandable {
-                Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
-                    .font(.system(size: 8))
-                    .foregroundStyle(.tertiary)
-            }
         }
         .padding(.horizontal, 16)
-        .frame(height: 24)
+        .frame(height: 26)
         .contentShape(Rectangle())
         .onTapGesture {
             onTap?()
