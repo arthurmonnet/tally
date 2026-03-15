@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pulse</title>
+<title>Tally</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600;700&display=swap');
 
@@ -182,43 +182,10 @@
     color: #888;
   }
 
-  .git-row, .files-section {
+  .git-row {
     margin-bottom: 8px;
     font-size: 13px;
     color: #aaa;
-  }
-
-  .file-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 6px;
-    font-size: 13px;
-  }
-
-  .file-row .ext {
-    width: 50px;
-    color: #888;
-  }
-
-  .file-row .bar-bg {
-    flex: 1;
-    height: 6px;
-    background: #1a1a1a;
-    border-radius: 3px;
-    overflow: hidden;
-    max-width: 200px;
-  }
-
-  .file-row .bar-fill {
-    height: 100%;
-    background: #333;
-    border-radius: 3px;
-  }
-
-  .file-row .count {
-    color: #666;
-    font-size: 12px;
   }
 
   .achievements {
@@ -374,7 +341,7 @@
 <body>
 
 <div class="header">
-  <h1>PULSE</h1>
+  <h1>TALLY</h1>
   <span class="date" id="date"></span>
 </div>
 
@@ -535,24 +502,6 @@ async function render() {
     html += `<div class="git-row">${stats.gitCommits} commits &middot; ${stats.gitStashes} stashes</div>`;
   }
 
-  // Files Created
-  const files = stats.filesCreated || {};
-  const fileEntries = Object.entries(files).sort((a, b) => b[1] - a[1]).slice(0, 6);
-  if (fileEntries.length > 0) {
-    const maxFiles = Math.max(...fileEntries.map(e => e[1]));
-    html += '<div class="section-title">FILES CREATED</div>';
-    html += '<div class="files-section">';
-    for (const [ext, count] of fileEntries) {
-      const pct = maxFiles > 0 ? (count / maxFiles * 100) : 0;
-      html += `<div class="file-row">
-        <span class="ext">.${ext}</span>
-        <div class="bar-bg"><div class="bar-fill" style="width:${pct}%"></div></div>
-        <span class="count">${count}</span>
-      </div>`;
-    }
-    html += '</div>';
-  }
-
   // Achievements
   if (achievements && achievements.length > 0) {
     html += '<div class="section-title">ACHIEVEMENTS</div>';
@@ -601,7 +550,7 @@ async function loadWindowChart() {
   const max = Math.max(...points.map(p => p.value), 1);
 
   // Build SVG polyline
-  const svgW = points.length;
+  const svgW = 600;
   const svgH = 100;
   const padding = 5;
   const usableH = svgH - padding * 2;
@@ -618,18 +567,21 @@ async function loadWindowChart() {
   const lastX = svgW;
   const lastY = padding + usableH - (points[points.length - 1].value / max) * usableH;
 
-  // Time labels: pick ~6 evenly spaced labels
-  const labelCount = Math.min(6, points.length);
-  const step = Math.floor(points.length / labelCount);
+  // Time labels: pick up to 5 evenly spaced labels, last is "now"
+  const numLabels = Math.min(5, points.length);
   let timeLabels = '';
-  for (let i = 0; i < points.length; i += step) {
-    const t = points[i].time;
-    // Convert 24h to 12h
-    const parts = t.split(':');
-    const h = parseInt(parts[0]);
-    const ampm = h >= 12 ? 'pm' : 'am';
-    const h12 = h === 0 ? 12 : (h > 12 ? h - 12 : h);
-    timeLabels += `<span>${h12}${ampm}</span>`;
+  for (let i = 0; i < numLabels; i++) {
+    if (i === numLabels - 1) {
+      timeLabels += `<span>now</span>`;
+    } else {
+      const idx = Math.round(i * (points.length - 1) / (numLabels - 1));
+      const t = points[idx].time;
+      const parts = t.split(':');
+      const h = parseInt(parts[0]);
+      const ampm = h >= 12 ? 'pm' : 'am';
+      const h12 = h === 0 ? 12 : (h > 12 ? h - 12 : h);
+      timeLabels += `<span>${h12}${ampm}</span>`;
+    }
   }
 
   const peak = summary.peak || {};

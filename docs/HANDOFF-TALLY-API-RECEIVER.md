@@ -1,14 +1,14 @@
-# Handoff: PulseBar API Receiver for arthurmonnet.com
+# Handoff: Tally API Receiver for arthurmonnet.com
 
 ## Goal
 
-Add a webhook endpoint to **arthurmonnet.com** (portfolio-2026) that receives daily developer stats pushed from the **PulseBar** macOS app, stores them, and exposes them for display on the site.
+Add a webhook endpoint to **arthurmonnet.com** (portfolio-2026) that receives daily developer stats pushed from the **Tally** macOS app, stores them, and exposes them for display on the site.
 
 ---
 
 ## Context
 
-**PulseBar** is a macOS menu bar app that collects developer activity stats (keystrokes, clicks, git commits, app usage, etc.) and can push a daily JSON summary to any HTTPS endpoint. Arthur wants to receive that data on his portfolio website so he can display live/daily developer stats publicly.
+**Tally** is a macOS menu bar app that collects developer activity stats (keystrokes, clicks, git commits, app usage, etc.) and can push a daily JSON summary to any HTTPS endpoint. Arthur wants to receive that data on his portfolio website so he can display live/daily developer stats publicly.
 
 ---
 
@@ -52,7 +52,7 @@ export async function POST(request: Request) {
 ```json
 {
   "functions": {
-    "src/app/api/pulse/route.ts": { "memory": 128, "maxDuration": 10 }
+    "src/app/api/tally/route.ts": { "memory": 128, "maxDuration": 10 }
   }
 }
 ```
@@ -68,26 +68,26 @@ Stored in `.env.local` and Vercel dashboard. Existing vars:
 
 ## What to Build
 
-### 1. POST `/api/pulse` — Webhook receiver
+### 1. POST `/api/tally` — Webhook receiver
 
-Receives the JSON payload from PulseBar and stores it.
+Receives the JSON payload from Tally and stores it.
 
 **Authentication:** Validate a shared secret via Bearer token.
 
 ```
-Authorization: Bearer <PULSE_API_TOKEN>
+Authorization: Bearer <TALLY_API_TOKEN>
 ```
 
-Add env var: `PULSE_API_TOKEN` — a secret token shared between PulseBar and the website. Reject with `401` if missing or wrong.
+Add env var: `TALLY_API_TOKEN` — a secret token shared between Tally and the website. Reject with `401` if missing or wrong.
 
 **Validation:** Validate the incoming payload with Zod (already in deps). Schema below.
 
 **Storage:** Since there's no database, use **Vercel KV (Redis)** or **Vercel Blob** to persist daily summaries. Vercel KV is simpler for key-value lookups by date. Alternatively, a simple JSON file via Vercel Blob works.
 
 Recommended: **Vercel KV** — add `@vercel/kv` to deps.
-- Key pattern: `pulse:{date}` (e.g. `pulse:2026-03-13`)
+- Key pattern: `tally:{date}` (e.g. `tally:2026-03-13`)
 - Value: the full validated payload as JSON
-- Also maintain a `pulse:latest` key pointing to the most recent push
+- Also maintain a `tally:latest` key pointing to the most recent push
 
 **Response:**
 - `200` on success
@@ -96,19 +96,19 @@ Recommended: **Vercel KV** — add `@vercel/kv` to deps.
 - `429` on rate limit (optional)
 - `500` on server error
 
-### 2. GET `/api/pulse` — Read stats
+### 2. GET `/api/tally` — Read stats
 
 Public endpoint to fetch stored stats for display.
 
-- `GET /api/pulse` → returns latest day's stats
-- `GET /api/pulse?date=2026-03-13` → returns specific day
-- `GET /api/pulse?range=7` → returns last 7 days
+- `GET /api/tally` → returns latest day's stats
+- `GET /api/tally?date=2026-03-13` → returns specific day
+- `GET /api/tally?range=7` → returns last 7 days
 
 Cache with `Cache-Control: public, s-maxage=300, stale-while-revalidate=3600`.
 
-### 3. Types — `src/lib/pulse-types.ts`
+### 3. Types — `src/lib/tally-types.ts`
 
-Shared TypeScript types and Zod schema for the PulseBar payload:
+Shared TypeScript types and Zod schema for the Tally payload:
 
 ```typescript
 import { z } from "zod";
@@ -118,7 +118,7 @@ const appTimeEntrySchema = z.object({
   minutes: z.number(),
 });
 
-export const pulsePayloadSchema = z.object({
+export const tallyPayloadSchema = z.object({
   version: z.literal(1),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   keystrokes: z.number().int().nonnegative(),
@@ -143,13 +143,13 @@ export const pulsePayloadSchema = z.object({
   fun_line: z.string(),
 });
 
-export type PulsePayload = z.infer<typeof pulsePayloadSchema>;
+export type TallyPayload = z.infer<typeof tallyPayloadSchema>;
 export type AppTimeEntry = z.infer<typeof appTimeEntrySchema>;
 ```
 
 ---
 
-## PulseBar Push Behavior (what the sender does)
+## Tally Push Behavior (what the sender does)
 
 | Detail | Value |
 |--------|-------|
@@ -208,24 +208,24 @@ The payload is **always the full day's stats up to now** — not a delta. Each p
 npm install @vercel/kv
 ```
 
-Add `PULSE_API_TOKEN` and `KV_REST_API_URL` / `KV_REST_API_TOKEN` to `.env.local` and Vercel dashboard.
+Add `TALLY_API_TOKEN` and `KV_REST_API_URL` / `KV_REST_API_TOKEN` to `.env.local` and Vercel dashboard.
 
 ### Step 2: Create types file
 
-Create `src/lib/pulse-types.ts` with the Zod schema and exported types (see above).
+Create `src/lib/tally-types.ts` with the Zod schema and exported types (see above).
 
 ### Step 3: Create API route
 
-Create `src/app/api/pulse/route.ts` with:
+Create `src/app/api/tally/route.ts` with:
 
 - **POST handler:**
   1. Extract and validate Bearer token from `Authorization` header
-  2. Parse and validate body with `pulsePayloadSchema`
-  3. Store in Vercel KV: `set("pulse:{date}", payload)` and `set("pulse:latest", payload)`
+  2. Parse and validate body with `tallyPayloadSchema`
+  3. Store in Vercel KV: `set("tally:{date}", payload)` and `set("tally:latest", payload)`
   4. Return `{ ok: true }`
 
 - **GET handler:**
-  1. Read `?date=` param or default to `pulse:latest`
+  1. Read `?date=` param or default to `tally:latest`
   2. If `?range=N`, fetch last N days using KV scan or date math
   3. Return JSON with CORS + cache headers
 
@@ -233,16 +233,16 @@ Create `src/app/api/pulse/route.ts` with:
 
 Add the function config for the new route.
 
-### Step 5: Configure PulseBar
+### Step 5: Configure Tally
 
-In PulseBar settings:
-- Endpoint: `https://arthurmonnet.com/api/pulse`
-- API Token: same value as `PULSE_API_TOKEN` env var
+In Tally settings:
+- Endpoint: `https://arthurmonnet.com/api/tally`
+- API Token: same value as `TALLY_API_TOKEN` env var
 - Frequency: Every hour (or preference)
 
 ### Step 6 (optional): Display component
 
-Create a component that fetches `GET /api/pulse` and renders stats on the portfolio. This is a follow-up task — get the receiver working first.
+Create a component that fetches `GET /api/tally` and renders stats on the portfolio. This is a follow-up task — get the receiver working first.
 
 ---
 
@@ -250,10 +250,10 @@ Create a component that fetches `GET /api/pulse` and renders stats on the portfo
 
 | File | Action |
 |------|--------|
-| `src/lib/pulse-types.ts` | **Create** — Zod schema + types |
-| `src/app/api/pulse/route.ts` | **Create** — POST + GET handlers |
+| `src/lib/tally-types.ts` | **Create** — Zod schema + types |
+| `src/app/api/tally/route.ts` | **Create** — POST + GET handlers |
 | `vercel.json` | **Edit** — add function config |
-| `.env.local` | **Edit** — add `PULSE_API_TOKEN`, KV credentials |
+| `.env.local` | **Edit** — add `TALLY_API_TOKEN`, KV credentials |
 | `package.json` | **Edit** — add `@vercel/kv` |
 
 ---
@@ -261,7 +261,7 @@ Create a component that fetches `GET /api/pulse` and renders stats on the portfo
 ## Constraints
 
 - **No database migrations** — use Vercel KV (serverless Redis), no schema to manage.
-- **Upsert semantics** — same date push replaces previous data (PulseBar sends cumulative stats, not deltas).
+- **Upsert semantics** — same date push replaces previous data (Tally sends cumulative stats, not deltas).
 - **HTTPS only** — Vercel handles TLS.
 - **Keep it simple** — no auth framework, just Bearer token comparison.
 - **Follow existing patterns** — match the try/catch + NextResponse.json style used in other routes.
@@ -272,6 +272,6 @@ Create a component that fetches `GET /api/pulse` and renders stats on the portfo
 ## API Documentation
 
 Full API docs (payload schema, auth, error codes, example server) are available at:
-`/Users/arthurmonnet/Projects/PulseBar/docs/api.html`
+`/Users/arthurmonnet/Projects/Tally/docs/api.html`
 
-Open with: `open /Users/arthurmonnet/Projects/PulseBar/docs/api.html`
+Open with: `open /Users/arthurmonnet/Projects/Tally/docs/api.html`

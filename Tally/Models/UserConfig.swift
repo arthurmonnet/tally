@@ -1,6 +1,7 @@
 import Foundation
 
 enum PushFrequency: String, Codable, Sendable, CaseIterable {
+    case fifteenMinutes = "15m"
     case thirtyMinutes = "30m"
     case oneHour = "1h"
     case threeHours = "3h"
@@ -8,7 +9,8 @@ enum PushFrequency: String, Codable, Sendable, CaseIterable {
 
     var displayName: String {
         switch self {
-        case .thirtyMinutes: return "Every 30 min"
+        case .fifteenMinutes: return "Every 15 minutes"
+        case .thirtyMinutes: return "Every 30 minutes"
         case .oneHour: return "Every hour"
         case .threeHours: return "Every 3 hours"
         case .manual: return "Manual only"
@@ -17,6 +19,7 @@ enum PushFrequency: String, Codable, Sendable, CaseIterable {
 
     var intervalSeconds: TimeInterval? {
         switch self {
+        case .fifteenMinutes: return 15 * 60
         case .thirtyMinutes: return 30 * 60
         case .oneHour: return 60 * 60
         case .threeHours: return 3 * 60 * 60
@@ -126,8 +129,16 @@ struct UserConfig: Codable, Sendable {
             for: .applicationSupportDirectory,
             in: .userDomainMask
         ).first!
-        let pulseDir = appSupport.appendingPathComponent("Pulse")
-        return pulseDir.appendingPathComponent("config.json")
+        let tallyDir = appSupport.appendingPathComponent("Tally")
+
+        // Migrate from old "Pulse" directory if it exists
+        let oldDir = appSupport.appendingPathComponent("Pulse")
+        if FileManager.default.fileExists(atPath: oldDir.path) &&
+           !FileManager.default.fileExists(atPath: tallyDir.path) {
+            try? FileManager.default.moveItem(at: oldDir, to: tallyDir)
+        }
+
+        return tallyDir.appendingPathComponent("config.json")
     }
 
     static func load() -> UserConfig? {

@@ -23,7 +23,7 @@ struct PrivacyView: View {
         VStack(spacing: 20) {
             Spacer()
 
-            Text("What Pulse tracks")
+            Text("What Tally tracks")
                 .font(.title2.bold())
 
             VStack(alignment: .leading, spacing: 8) {
@@ -37,7 +37,7 @@ struct PrivacyView: View {
             Divider()
                 .padding(.horizontal, 40)
 
-            Text("What Pulse never does")
+            Text("What Tally never does")
                 .font(.title3.bold())
 
             VStack(alignment: .leading, spacing: 8) {

@@ -2,7 +2,7 @@ import Foundation
 import Security
 
 enum KeychainHelper {
-    private static let service = "com.pulse.pulsebar"
+    private static let service = "com.tally.app"
 
     static func save(key: String, value: String) -> Bool {
         guard let data = value.data(using: .utf8) else { return false }

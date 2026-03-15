@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PulseBar API Documentation</title>
+  <title>Tally API Documentation</title>
   <style>
     :root {
       --bg: #0f1117;
@@ -184,7 +184,7 @@
 <body>
   <div class="wrapper">
     <nav>
-      <div class="logo">Pulse<span>Bar</span> API</div>
+      <div class="logo">Tally API</div>
 
       <div class="section-title">Overview</div>
       <a href="#introduction">Introduction</a>
@@ -207,19 +207,19 @@
     </nav>
 
     <main>
-      <h1 id="introduction">PulseBar Push API</h1>
+      <h1 id="introduction">Tally Push API</h1>
       <p class="subtitle">Receive your daily developer stats on any server via a simple JSON webhook.</p>
 
-      <p>PulseBar can push a daily summary of your activity to a remote HTTP endpoint. This page documents the payload format, authentication, and expected server behavior so you can build dashboards, team feeds, or personal analytics on top of your data.</p>
+      <p>Tally can push a daily summary of your activity to a remote HTTP endpoint. This page documents the payload format, authentication, and expected server behavior so you can build dashboards, team feeds, or personal analytics on top of your data.</p>
 
       <div class="card info">
         <p class="card-title">How it works</p>
-        <p>PulseBar collects stats locally (keystrokes, clicks, app usage, git activity, etc.) and periodically sends a <code>POST</code> request with a JSON payload to the endpoint you configure in the app.</p>
+        <p>Tally collects stats locally (keystrokes, clicks, app usage, git activity, etc.) and periodically sends a <code>POST</code> request with a JSON payload to the endpoint you configure in the app.</p>
       </div>
 
       <!-- Authentication -->
       <h2 id="authentication">Authentication</h2>
-      <p>Every request includes a <strong>Bearer token</strong> in the <code>Authorization</code> header. Set your token in the PulseBar settings panel &mdash; it is stored securely in the macOS Keychain.</p>
+      <p>Every request includes a <strong>Bearer token</strong> in the <code>Authorization</code> header. Set your token in the Tally settings panel &mdash; it is stored securely in the macOS Keychain.</p>
 
       <pre><code><span class="key">Authorization</span>: Bearer <span class="str">&lt;your-api-token&gt;</span></code></pre>
 
@@ -227,7 +227,7 @@
 
       <!-- Endpoint -->
       <h2 id="endpoint">Endpoint Setup</h2>
-      <p>Configure your endpoint URL in <strong>PulseBar &rarr; Pulse API</strong> settings.</p>
+      <p>Configure your endpoint URL in <strong>Tally &rarr; Tally API</strong> settings.</p>
 
       <div class="card warn">
         <p class="card-title">HTTPS Required</p>
@@ -297,16 +297,16 @@
       <table>
         <thead><tr><th>Status</th><th>Meaning</th></tr></thead>
         <tbody>
-          <tr><td><span class="status ok">200-299</span></td><td>Push accepted. PulseBar records success.</td></tr>
+          <tr><td><span class="status ok">200-299</span></td><td>Push accepted. Tally records success.</td></tr>
           <tr><td><span class="status err">401</span></td><td>Invalid or missing API token.</td></tr>
-          <tr><td><span class="status err">4xx / 5xx</span></td><td>Push failed. PulseBar will retry once after 5 seconds.</td></tr>
+          <tr><td><span class="status err">4xx / 5xx</span></td><td>Push failed. Tally will retry once after 5 seconds.</td></tr>
         </tbody>
       </table>
       <p>The response body is not inspected &mdash; only the status code matters.</p>
 
       <!-- Frequency -->
       <h2 id="frequency">Push Frequency</h2>
-      <p>Choose how often PulseBar sends stats:</p>
+      <p>Choose how often Tally sends stats:</p>
       <table>
         <thead><tr><th>Option</th><th>Interval</th></tr></thead>
         <tbody>
@@ -317,12 +317,12 @@
         </tbody>
       </table>
 
-      <p>PulseBar also pushes automatically when the app quits and when the Mac wakes from sleep (if the interval has elapsed).</p>
+      <p>Tally also pushes automatically when the app quits and when the Mac wakes from sleep (if the interval has elapsed).</p>
 
       <!-- Retry -->
       <h2 id="retry">Retry &amp; Scheduling</h2>
       <ul>
-        <li>If a push fails, PulseBar retries <strong>once</strong> after a 5-second delay.</li>
+        <li>If a push fails, Tally retries <strong>once</strong> after a 5-second delay.</li>
         <li>If both attempts fail, the error is shown in the status area.</li>
         <li>On wake-from-sleep, a push fires immediately if the configured interval has passed.</li>
         <li>A final push is attempted on app quit (10 s timeout).</li>
@@ -331,7 +331,7 @@
       <!-- Full Example -->
       <h2 id="example">Full Example</h2>
       <h3>Request</h3>
-<pre><code><span class="comment">// POST https://yoursite.com/api/pulse</span>
+<pre><code><span class="comment">// POST https://yoursite.com/api/tally</span>
 <span class="comment">// Authorization: Bearer sk-abc123</span>
 <span class="comment">// Content-Type: application/json</span>
 
@@ -371,10 +371,10 @@
 
 app.use(express.json());
 
-app.post(<span class="str">"/api/pulse"</span>, (req, res) => {
+app.post(<span class="str">"/api/tally"</span>, (req, res) => {
   <span class="key">const</span> token = req.headers.authorization?.replace(<span class="str">"Bearer "</span>, <span class="str">""</span>);
 
-  <span class="key">if</span> (token !== process.env.PULSE_TOKEN) {
+  <span class="key">if</span> (token !== process.env.TALLY_TOKEN) {
     <span class="key">return</span> res.status(<span class="num">401</span>).json({ error: <span class="str">"Unauthorized"</span> });
   }
 

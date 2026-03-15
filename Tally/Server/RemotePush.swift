@@ -37,8 +37,8 @@ struct RemotePush: Sendable {
     static func normalizeURL(_ input: String) -> String {
         var url = input.trimmingCharacters(in: .whitespacesAndNewlines)
         while url.hasSuffix("/") { url = String(url.dropLast()) }
-        if url.hasSuffix("/api/pulse") {
-            url = String(url.dropLast("/api/pulse".count))
+        if url.hasSuffix("/api/tally") {
+            url = String(url.dropLast("/api/tally".count))
         }
         return url
     }
@@ -47,15 +47,29 @@ struct RemotePush: Sendable {
 
     func testConnection(url: String, token: String) async -> ConnectionResult {
         let baseURL = Self.normalizeURL(url)
-        guard let endpoint = URL(string: baseURL + "/api/pulse") else {
+        guard let endpoint = URL(string: baseURL + "/api/tally") else {
             return .error("Invalid URL")
         }
+
+        // Build a minimal but schema-valid payload so the server doesn't reject it
+        let testPayload = RemotePushPayload(
+            version: 2,
+            date: { let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd"; return f.string(from: Date()) }(),
+            keystrokes: 0, clicks: 0, copyPaste: 0, screenshots: 0,
+            cmdZ: 0, launcherOpens: 0, appSwitches: 0,
+            scrollDistanceM: 0, mouseDistanceM: 0,
+            darkModeMinutes: 0, lightModeMinutes: 0,
+            topApps: [], filesCreated: [:], filesDeleted: 0,
+            gitCommits: 0, gitStashes: 0, peakRamGb: 0, activeHours: 0,
+            achievementsUnlocked: [], funLine: "Connection test",
+            peakWindows: 0, avgWindows: 0, history: nil
+        )
 
         var request = URLRequest(url: endpoint)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        request.httpBody = "{\"test\":true}".data(using: .utf8)
+        request.httpBody = try? JSONEncoder().encode(testPayload)
         request.timeoutInterval = 10
 
         do {
@@ -78,7 +92,7 @@ struct RemotePush: Sendable {
     func pushDailySummary(url: String, token: String) async -> PushResult {
         // Normalize and build endpoint URL
         let baseURL = Self.normalizeURL(url)
-        guard let endpoint = URL(string: baseURL + "/api/pulse"),
+        guard let endpoint = URL(string: baseURL + "/api/tally"),
               let scheme = endpoint.scheme?.lowercased(),
               let host = endpoint.host?.lowercased() else {
             return .failure("Invalid URL")

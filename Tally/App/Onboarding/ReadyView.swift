@@ -21,7 +21,7 @@ struct ReadyView: View {
             Text("You're all set.")
                 .font(.title.bold())
 
-            Text("Pulse is now tracking in your menubar.\nClick the icon anytime to see today's stats.")
+            Text("Tally is now tracking in your menubar.\nClick the icon anytime to see today's stats.")
                 .font(.body)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)

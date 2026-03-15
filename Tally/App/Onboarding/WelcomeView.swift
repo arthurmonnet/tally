@@ -12,7 +12,7 @@ struct WelcomeView: View {
                 .foregroundStyle(.primary)
 
             VStack(spacing: 12) {
-                Text("Welcome to Pulse")
+                Text("Welcome to Tally")
                     .font(.title.bold())
 
                 Text("Track your daily activity — keystrokes, clicks, apps, git, screenshots — and surface fun stats about how you work.")

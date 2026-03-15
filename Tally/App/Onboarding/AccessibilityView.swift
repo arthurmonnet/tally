@@ -40,19 +40,19 @@ struct AccessibilityView: View {
             Text("Accessibility Access")
                 .font(.title2.bold())
 
-            Text("Pulse needs Accessibility permission to count keystrokes, clicks, and scroll distance.")
+            Text("Tally needs Accessibility permission to count keystrokes, clicks, and scroll distance.")
                 .font(.body)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
 
-            Text("macOS requires this for any app that monitors input events. Pulse uses it only for counting — never recording.")
+            Text("macOS requires this for any app that monitors input events. Tally uses it only for counting — never recording.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
 
             VStack(alignment: .leading, spacing: 6) {
                 instructionRow(number: "1", text: "Click \"Open System Settings\"")
-                instructionRow(number: "2", text: "Find Pulse in the list")
+                instructionRow(number: "2", text: "Find Tally in the list")
                 instructionRow(number: "3", text: "Toggle it on")
                 instructionRow(number: "4", text: "Come back here")
             }
@@ -69,7 +69,7 @@ struct AccessibilityView: View {
             .buttonStyle(.borderedProminent)
             .controlSize(.large)
 
-            Button("Skip for now — Pulse will run with limited tracking") {
+            Button("Skip for now — Tally will run with limited tracking") {
                 state.accessibilitySkipped = true
                 state.advance()
             }
@@ -89,7 +89,7 @@ struct AccessibilityView: View {
             Text("Accessibility access granted.")
                 .font(.title3.weight(.medium))
 
-            Text("Pulse can now track your activity.")
+            Text("Tally can now track your activity.")
                 .font(.body)
                 .foregroundStyle(.secondary)
 

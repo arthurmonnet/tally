@@ -1,12 +1,12 @@
 import SwiftUI
 
 @main
-struct PulseBarApp: App {
+struct TallyApp: App {
     @State private var appState = AppState()
     @Environment(\.openWindow) private var openWindow
 
     var body: some Scene {
-        MenuBarExtra("Pulse", systemImage: "waveform.path.ecg") {
+        MenuBarExtra("Tally", systemImage: "waveform.path.ecg") {
             MenuBarView(pushScheduler: appState.pushScheduler)
                 .onAppear {
                     if !appState.isSetupComplete {
@@ -16,7 +16,7 @@ struct PulseBarApp: App {
         }
         .menuBarExtraStyle(.window)
 
-        Window("Pulse Setup", id: "onboarding") {
+        Window("Tally Setup", id: "onboarding") {
             OnboardingWindow()
                 .onReceive(NotificationCenter.default.publisher(for: .onboardingCompleted)) { _ in
                     appState.isSetupComplete = true
@@ -31,10 +31,11 @@ struct PulseBarApp: App {
         .defaultPosition(.center)
         .defaultSize(width: 480, height: 520)
 
-        Window("Pulse API", id: "pulse-api-settings") {
-            PulseAPISettingsView(pushScheduler: appState.pushScheduler)
+        Window("Tally API", id: "tally-api-settings") {
+            TallyAPISettingsView(pushScheduler: appState.pushScheduler)
         }
-        .defaultSize(width: 440, height: 460)
+        .windowResizability(.contentSize)
+        .defaultSize(width: 480, height: 120)
     }
 }
 

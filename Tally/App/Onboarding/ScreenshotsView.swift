@@ -82,7 +82,7 @@ struct ScreenshotsView: View {
                 }
                 .padding(.horizontal, 32)
             } else {
-                Text("No screenshots found in this folder.\nTry a different folder, or skip and Pulse will detect them as they come.")
+                Text("No screenshots found in this folder.\nTry a different folder, or skip and Tally will detect them as they come.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)

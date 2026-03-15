@@ -11,7 +11,7 @@ struct MenuBarView: View {
     @State private var windowPeak: Int64 = 0
     @State private var windowTimeline: [(time: String, value: Int64)] = []
     @State private var todayAchievementRecords: [AchievementRecord] = []
-    @State private var pulsePhase: Bool = false
+    @State private var animPhase: Bool = false
 
     private let statsEngine = StatsEngine()
 
@@ -65,7 +65,7 @@ struct MenuBarView: View {
             await loadStats()
         }
         .onAppear {
-            pulsePhase = true
+            animPhase = true
             refreshTimer = Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { _ in
                 Task { @MainActor in
                     await loadStats()
@@ -98,8 +98,8 @@ struct MenuBarView: View {
         Circle()
             .fill(accessibilityGranted ? Color.green : Color.orange)
             .frame(width: 6, height: 6)
-            .opacity(pulsePhase ? 1.0 : 0.6)
-            .animation(.easeInOut(duration: 2).repeatForever(autoreverses: true), value: pulsePhase)
+            .opacity(animPhase ? 1.0 : 0.6)
+            .animation(.easeInOut(duration: 2).repeatForever(autoreverses: true), value: animPhase)
     }
 
     // MARK: - Stats Section (flat list, no headers)
@@ -135,25 +135,6 @@ struct MenuBarView: View {
             let screenshots = stats["screenshots"]?.int ?? 0
             if screenshots > 0 {
                 expandableRow(icon: "camera.viewfinder", label: "Screenshots", keys: ["screenshots"], historyKey: "screenshots")
-            }
-
-            let totalFilesCreated = filesCreatedByExtension.values.reduce(Int64(0), +)
-            if totalFilesCreated > 0 {
-                expandableRow(icon: "doc.badge.plus", label: "Files created", keys: filesCreatedStatKeys, historyKey: "files_created")
-
-                let topExtensions = filesCreatedByExtension
-                    .sorted { $0.value > $1.value }
-                    .prefix(3)
-                    .map { ".\($0.key) \($0.value)" }
-                    .joined(separator: " \u{00B7} ")
-                if !topExtensions.isEmpty {
-                    Text(topExtensions)
-                        .font(.system(size: 10))
-                        .foregroundStyle(.secondary)
-                        .padding(.leading, 32)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 2)
-                }
             }
 
             let commits = stats["git_commits"]?.int ?? 0
@@ -260,7 +241,7 @@ struct MenuBarView: View {
 
                 Button("Settings") {
                     NSApplication.shared.activate(ignoringOtherApps: true)
-                    openWindow(id: "pulse-api-settings")
+                    openWindow(id: "tally-api-settings")
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                         NSApplication.shared.activate(ignoringOtherApps: true)
                     }
@@ -313,10 +294,6 @@ struct MenuBarView: View {
         }
     }
 
-    private var filesCreatedStatKeys: [String] {
-        filesCreatedByExtension.keys.map { "files_created:\($0)" }
-    }
-
     // MARK: - Data
 
     private func loadStats() async {
@@ -355,24 +332,6 @@ struct MenuBarView: View {
             .filter { AppFilter.shouldDisplay(name: $0.name, bundleID: bundles[$0.name]) }
             .filter { $0.minutes > 0 }
             .sorted { $0.minutes > $1.minutes }
-    }
-
-    private static let ignoredExtensions: Set<String> = [
-        "ds_store", "localized", "swp", "tmp", "lock", "log",
-    ]
-
-    private var filesCreatedByExtension: [String: Int64] {
-        stats
-            .filter { $0.key.hasPrefix("files_created:") }
-            .reduce(into: [String: Int64]()) { result, entry in
-                let ext = String(entry.key.dropFirst("files_created:".count))
-                // Filter invalid/noisy extensions
-                guard !ext.isEmpty,
-                      ext.count <= 10,
-                      ext.allSatisfy({ $0.isLetter || $0.isNumber }),
-                      !Self.ignoredExtensions.contains(ext) else { return }
-                result[ext, default: 0] += entry.value.int
-            }
     }
 
     // MARK: - Achievement Helpers

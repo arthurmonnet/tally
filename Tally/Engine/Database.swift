@@ -17,10 +17,18 @@ final class Database: Sendable {
             for: .applicationSupportDirectory,
             in: .userDomainMask
         ).first!
-        let pulseDir = appSupport.appendingPathComponent("Pulse")
-        try FileManager.default.createDirectory(at: pulseDir, withIntermediateDirectories: true)
+        let tallyDir = appSupport.appendingPathComponent("Tally")
 
-        let dbPath = pulseDir.appendingPathComponent("pulse.db").path
+        // Migrate from old "Pulse" directory if it exists
+        let oldDir = appSupport.appendingPathComponent("Pulse")
+        if FileManager.default.fileExists(atPath: oldDir.path) &&
+           !FileManager.default.fileExists(atPath: tallyDir.path) {
+            try FileManager.default.moveItem(at: oldDir, to: tallyDir)
+        }
+
+        try FileManager.default.createDirectory(at: tallyDir, withIntermediateDirectories: true)
+
+        let dbPath = tallyDir.appendingPathComponent("tally.db").path
         dbPool = try DatabasePool(path: dbPath)
         try migrate()
     }
