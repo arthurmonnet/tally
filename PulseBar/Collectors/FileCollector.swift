@@ -112,8 +112,8 @@ final class FileCollector {
 
         // Check if file exists (created) or not (deleted)
         if fm.fileExists(atPath: path) {
-            // File created
-            if !ext.isEmpty {
+            // File created — validate extension is a clean alphanumeric extension
+            if !ext.isEmpty, ext.count <= 10, ext.allSatisfy({ $0.isLetter || $0.isNumber }) {
                 counters["files_created:\(ext)", default: 0] += 1
             }
 

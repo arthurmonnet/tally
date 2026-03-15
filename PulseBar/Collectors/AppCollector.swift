@@ -109,9 +109,9 @@ final class AppCollector {
         }
 
         for (appName, duration) in appTimeBuckets {
-            let minutes = Int64(duration / 60.0)
-            if minutes > 0 {
-                events.append((statKey: "app_time:\(appName)", valueInt: minutes, valueFloat: 0.0))
+            let seconds = Int64(duration)
+            if seconds > 0 {
+                events.append((statKey: "app_time:\(appName)", valueInt: seconds, valueFloat: 0.0))
             }
         }
         appTimeBuckets.removeAll()

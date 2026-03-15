@@ -148,6 +148,50 @@ final class Database: Sendable {
         }
     }
 
+    // MARK: - Gauge Stats (latest value, not sum)
+
+    /// Returns the latest value for a snapshot/gauge stat (e.g. window_count)
+    func latestValue(statKey: String, since: String) throws -> Int64 {
+        try dbPool.read { db in
+            let row = try Row.fetchOne(
+                db,
+                sql: """
+                    SELECT value_int FROM events
+                    WHERE stat_key = ? AND bucket >= ?
+                    ORDER BY bucket DESC LIMIT 1
+                """,
+                arguments: [statKey, since]
+            )
+            return row?["value_int"] ?? 0
+        }
+    }
+
+    /// Returns the peak (max) value for a stat across all buckets since a given time
+    func peakValue(statKey: String, since: String) throws -> Int64 {
+        try dbPool.read { db in
+            let row = try Row.fetchOne(
+                db,
+                sql: """
+                    SELECT COALESCE(MAX(value_int), 0) as peak FROM events
+                    WHERE stat_key = ? AND bucket >= ?
+                """,
+                arguments: [statKey, since]
+            )
+            return row?["peak"] ?? 0
+        }
+    }
+
+    // MARK: - Today's Achievements
+
+    func todayAchievements() throws -> [AchievementRecord] {
+        let todayPrefix = todayDateString()
+        return try dbPool.read { db in
+            try AchievementRecord
+                .filter(Column("unlocked_at") >= todayPrefix)
+                .fetchAll(db)
+        }
+    }
+
     // MARK: - Stat History by Day
 
     func statHistoryByDay(statKeys: [String], days: Int) throws -> [(date: String, value: Int64)] {
