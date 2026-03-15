@@ -36,8 +36,14 @@ final class OnboardingState {
     var gitRepos: [URL] = []
 
     init() {
-        let savedStep = UserDefaults.standard.integer(forKey: "onboarding_current_step")
-        currentStep = OnboardingStep(rawValue: savedStep) ?? .welcome
+        // Check for post-permission-restart resume step first
+        let resumeStep = UserDefaults.standard.integer(forKey: "onboardingResumeStep")
+        if resumeStep > 0, let step = OnboardingStep(rawValue: resumeStep) {
+            currentStep = step
+        } else {
+            let savedStep = UserDefaults.standard.integer(forKey: "onboarding_current_step")
+            currentStep = OnboardingStep(rawValue: savedStep) ?? .welcome
+        }
         accessibilityGranted = AXIsProcessTrusted()
     }
 
@@ -96,6 +102,7 @@ final class OnboardingState {
         }
 
         UserDefaults.standard.removeObject(forKey: "onboarding_current_step")
+        UserDefaults.standard.removeObject(forKey: "onboardingResumeStep")
         NotificationCenter.default.post(name: .onboardingCompleted, object: nil)
     }
 }

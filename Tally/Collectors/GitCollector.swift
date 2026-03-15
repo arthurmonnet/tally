@@ -19,9 +19,9 @@ final class GitCollector {
         }
 
         // Poll every 5 minutes
-        pollTimer = Timer.scheduledTimer(withTimeInterval: 300, repeats: true) { [weak self] _ in
-            Task { @MainActor in
-                self?.poll()
+        pollTimer = Timer.scheduledTimer(withTimeInterval: 300, repeats: true) { [self] _ in
+            MainActor.assumeIsolated {
+                self.poll()
             }
         }
 

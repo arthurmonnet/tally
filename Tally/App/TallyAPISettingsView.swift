@@ -236,7 +236,12 @@ struct TallyAPISettingsView: View {
         connectionTestResult = nil
 
         let remotePush = RemotePush()
-        connectionTestResult = await remotePush.testConnection(url: endpointUrl, token: token)
+        let result = await remotePush.testConnection(url: endpointUrl, token: token)
+        connectionTestResult = result
+
+        if case .success = result {
+            saveConfig()
+        }
 
         isTesting = false
     }

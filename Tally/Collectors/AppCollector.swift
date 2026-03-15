@@ -31,15 +31,16 @@ final class AppCollector {
             forName: NSWorkspace.didActivateApplicationNotification,
             object: nil,
             queue: .main
-        ) { [weak self] notification in
-            guard let self else { return }
-            self.handleAppSwitch(notification: notification)
+        ) { [self] notification in
+            MainActor.assumeIsolated {
+                self.handleAppSwitch(notification: notification)
+            }
         }
 
         // Flush every 10 seconds
-        flushTimer = Timer.scheduledTimer(withTimeInterval: 10, repeats: true) { [weak self] _ in
-            Task { @MainActor in
-                self?.flush()
+        flushTimer = Timer.scheduledTimer(withTimeInterval: 10, repeats: true) { [self] _ in
+            MainActor.assumeIsolated {
+                self.flush()
             }
         }
 

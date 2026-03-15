@@ -8,9 +8,12 @@ final class InputCollector {
     private var runLoopSource: CFRunLoopSource?
     private var flushTimer: Timer?
 
-    // In-memory counters — flushed to DB every 30 seconds
+    // In-memory counters — flushed to DB every 10 seconds
     private var counters: [String: Int64] = [:]
     private var floatCounters: [String: Double] = [:]
+
+    // Live stats for instant UI updates
+    private var liveStats: LiveStats?
 
     // Mouse tracking
     private var lastMousePosition: CGPoint?
@@ -25,7 +28,8 @@ final class InputCollector {
 
     private let db = Database.shared
 
-    func configure(launcherShortcut: String) {
+    func configure(launcherShortcut: String, liveStats: LiveStats? = nil) {
+        self.liveStats = liveStats
         // Parse "cmd+space" style shortcuts
         let parts = launcherShortcut.lowercased().split(separator: "+")
         for part in parts {
@@ -43,23 +47,20 @@ final class InputCollector {
     private var accessibilityRetryTimer: Timer?
 
     func start() {
-        // Prompt the user for accessibility permission if not yet granted
-        let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue(): true] as CFDictionary
-        let trusted = AXIsProcessTrustedWithOptions(options)
-
-        if trusted {
+        // Silent check only — never trigger the system permission dialog here.
+        // The onboarding AccessibilityView handles prompting the user.
+        if AXIsProcessTrusted() {
             startEventTap()
         } else {
-            print("[InputCollector] Accessibility permission not granted — prompting user, polling every 3s")
+            print("[InputCollector] Accessibility permission not granted — staying dormant, polling every 3s")
             startAccessibilityPolling()
         }
     }
 
     private func startAccessibilityPolling() {
         accessibilityRetryTimer?.invalidate()
-        accessibilityRetryTimer = Timer.scheduledTimer(withTimeInterval: 3, repeats: true) { [weak self] _ in
-            Task { @MainActor in
-                guard let self else { return }
+        accessibilityRetryTimer = Timer.scheduledTimer(withTimeInterval: 3, repeats: true) { [self] _ in
+            MainActor.assumeIsolated {
                 if AXIsProcessTrusted() {
                     self.accessibilityRetryTimer?.invalidate()
                     self.accessibilityRetryTimer = nil
@@ -111,9 +112,9 @@ final class InputCollector {
         CGEvent.tapEnable(tap: eventTap, enable: true)
 
         // Flush counters to DB every 10 seconds
-        flushTimer = Timer.scheduledTimer(withTimeInterval: 10, repeats: true) { [weak self] _ in
-            Task { @MainActor in
-                self?.flush()
+        flushTimer = Timer.scheduledTimer(withTimeInterval: 10, repeats: true) { [self] _ in
+            MainActor.assumeIsolated {
+                self.flush()
             }
         }
 
@@ -200,10 +201,12 @@ final class InputCollector {
 
     private func increment(_ key: String) {
         counters[key, default: 0] += 1
+        liveStats?.increment(key)
     }
 
     private func addFloat(_ key: String, value: Double) {
         floatCounters[key, default: 0] += value
+        liveStats?.addFloat(key, value: value)
     }
 
     private func flush() {

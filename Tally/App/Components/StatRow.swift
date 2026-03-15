@@ -44,6 +44,8 @@ struct StatRow: View {
                 .font(.system(size: 13, weight: .medium))
                 .monospacedDigit()
                 .foregroundStyle(.primary)
+                .contentTransition(.numericText())
+                .animation(.snappy(duration: 0.2), value: value)
         }
         .padding(.horizontal, 16)
         .frame(height: 26)

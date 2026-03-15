@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct OnboardingWindow: View {
+    var liveStats: LiveStats
     @State private var state = OnboardingState()
 
     var body: some View {
@@ -16,7 +17,7 @@ struct OnboardingWindow: View {
                 case .screenshots:
                     ScreenshotsView(state: state)
                 case .ready:
-                    ReadyView(state: state)
+                    ReadyView(state: state, liveStats: liveStats)
                 }
             }
             .transition(.asymmetric(

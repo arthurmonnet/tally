@@ -3,27 +3,47 @@ import SwiftUI
 @main
 struct TallyApp: App {
     @State private var appState = AppState()
-    @Environment(\.openWindow) private var openWindow
+
+    init() {
+        // On first launch, show as a regular app (dock icon visible)
+        // so the onboarding window appears in the foreground.
+        if !(UserConfig.load()?.onboardingCompleted ?? false) {
+            NSApplication.shared.setActivationPolicy(.regular)
+            DispatchQueue.main.async {
+                NSApplication.shared.activate(ignoringOtherApps: true)
+            }
+        }
+    }
 
     var body: some Scene {
-        MenuBarExtra("Tally", systemImage: "waveform.path.ecg") {
-            MenuBarView(pushScheduler: appState.pushScheduler)
-                .onAppear {
-                    if !appState.isSetupComplete {
-                        openWindow(id: "onboarding")
-                    }
-                }
+        MenuBarExtra("Tally", image: "MenuBarIcon") {
+            MenuBarView(pushScheduler: appState.pushScheduler, liveStats: appState.liveStats)
         }
         .menuBarExtraStyle(.window)
 
         Window("Tally Setup", id: "onboarding") {
-            OnboardingWindow()
+            OnboardingWindow(liveStats: appState.liveStats)
                 .onReceive(NotificationCenter.default.publisher(for: .onboardingCompleted)) { _ in
                     appState.isSetupComplete = true
                     appState.startAll()
+
+                    // Close the onboarding window and drop into menubar-only mode
                     NSApplication.shared.windows
                         .first { $0.identifier?.rawValue == "onboarding" }?
                         .close()
+                    NSApplication.shared.setActivationPolicy(.accessory)
+                }
+                .onAppear {
+                    guard !appState.isSetupComplete else { return }
+                    // Ensure the onboarding window is visible and focused
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        if let window = NSApplication.shared.windows.first(where: {
+                            $0.identifier?.rawValue == "onboarding"
+                        }) {
+                            window.makeKeyAndOrderFront(nil)
+                            NSApplication.shared.activate(ignoringOtherApps: true)
+                        }
+                    }
                 }
         }
         .windowStyle(.hiddenTitleBar)
@@ -44,6 +64,7 @@ struct TallyApp: App {
 final class AppState {
     var isSetupComplete: Bool
     let pushScheduler = PushScheduler()
+    let liveStats = LiveStats()
     private var collectorsStarted = false
 
     private let inputCollector = InputCollector()
@@ -71,12 +92,14 @@ final class AppState {
         guard !collectorsStarted else { return }
         collectorsStarted = true
 
-        inputCollector.configure(launcherShortcut: config.launcherShortcut)
+        liveStats.seedFromDatabase()
+
+        inputCollector.configure(launcherShortcut: config.launcherShortcut, liveStats: liveStats)
         inputCollector.start()
 
         appCollector.start()
 
-        fileCollector.configure(config: config)
+        fileCollector.configure(config: config, liveStats: liveStats)
         fileCollector.start()
 
         gitCollector.configure(repos: config.gitRepos)

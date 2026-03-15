@@ -151,8 +151,9 @@ struct ScreenshotsView: View {
         state.isScanning = true
         state.detectedTools = []
 
+        let folders = state.screenshotFolders
         DispatchQueue.global(qos: .userInitiated).async {
-            let results = performScan(folders: state.screenshotFolders)
+            let results = performScan(folders: folders)
             DispatchQueue.main.async {
                 state.detectedTools = results
                 state.isScanning = false

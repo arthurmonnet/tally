@@ -2,13 +2,7 @@ import SwiftUI
 
 struct ReadyView: View {
     let state: OnboardingState
-
-    @State private var keystrokes: Int64 = 0
-    @State private var clicks: Int64 = 0
-    @State private var screenshots: Int64 = 0
-    @State private var refreshTimer: Timer?
-
-    private let statsEngine = StatsEngine()
+    var liveStats: LiveStats
 
     var body: some View {
         VStack(spacing: 20) {
@@ -28,11 +22,11 @@ struct ReadyView: View {
 
             // Live preview card
             VStack(spacing: 12) {
-                statRow(icon: "keyboard", value: keystrokes, label: "keystrokes")
-                statRow(icon: "cursorarrow.click", value: clicks, label: "clicks")
-                statRow(icon: "camera.viewfinder", value: screenshots, label: "screenshots")
+                statRow(icon: "keyboard", value: liveStats.keystrokes, label: "keystrokes")
+                statRow(icon: "cursorarrow.click", value: liveStats.clicksLeft + liveStats.clicksRight, label: "clicks")
+                statRow(icon: "camera.viewfinder", value: liveStats.screenshots, label: "screenshots")
 
-                if keystrokes == 0 && clicks == 0 && screenshots == 0 {
+                if liveStats.keystrokes == 0 && liveStats.clicksLeft + liveStats.clicksRight == 0 && liveStats.screenshots == 0 {
                     Text("Waiting for first events...")
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -79,14 +73,6 @@ struct ReadyView: View {
 
             Spacer()
         }
-        .onAppear {
-            refreshStats()
-            startRefreshing()
-        }
-        .onDisappear {
-            refreshTimer?.invalidate()
-            refreshTimer = nil
-        }
     }
 
     private func statRow(icon: String, value: Int64, label: String) -> some View {
@@ -97,7 +83,7 @@ struct ReadyView: View {
             Text("\(value)")
                 .font(.system(size: 16, weight: .semibold, design: .monospaced))
                 .contentTransition(.numericText())
-                .animation(.easeInOut(duration: 0.3), value: value)
+                .animation(.snappy(duration: 0.2), value: value)
             Text(label)
                 .font(.system(size: 14))
                 .foregroundStyle(.secondary)
@@ -113,20 +99,5 @@ struct ReadyView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
-    }
-
-    private func startRefreshing() {
-        refreshTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { _ in
-            Task { @MainActor in
-                refreshStats()
-            }
-        }
-    }
-
-    private func refreshStats() {
-        guard let stats = try? statsEngine.todayStats() else { return }
-        keystrokes = stats.keystrokes
-        clicks = stats.clicksLeft + stats.clicksRight
-        screenshots = stats.screenshots
     }
 }

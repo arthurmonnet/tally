@@ -38,16 +38,17 @@ final class PushScheduler {
         await performPush()
     }
 
-    func pushOnQuit() {
-        guard isEnabled,
-              let config = UserConfig.load(),
+    nonisolated func pushOnQuit() {
+        guard let config = UserConfig.load(),
+              config.isRemotePushEnabled,
               let url = config.remotePushUrl,
               let token = KeychainHelper.remotePushToken else { return }
 
+        let push = RemotePush()
         let semaphore = DispatchSemaphore(value: 0)
 
         Task.detached {
-            let result = await self.remotePush.pushDailySummary(url: url, token: token)
+            let result = await push.pushDailySummary(url: url, token: token)
             print("[PushScheduler] Quit push: \(result.success ? "ok" : result.errorMessage ?? "failed")")
             semaphore.signal()
         }

@@ -12,9 +12,13 @@ final class FileCollector {
     private var counters: [String: Int64] = [:]
     private var maybeScreenshots: Int64 = 0
 
+    // Live stats for instant UI updates
+    private var liveStats: LiveStats?
+
     private let db = Database.shared
 
-    func configure(config: UserConfig) {
+    func configure(config: UserConfig, liveStats: LiveStats? = nil) {
+        self.liveStats = liveStats
         var paths = config.screenshotFolders.map {
             NSString(string: $0).expandingTildeInPath
         }
@@ -79,12 +83,12 @@ final class FileCollector {
             return
         }
 
-        FSEventStreamScheduleWithRunLoop(stream, CFRunLoopGetCurrent(), CFRunLoopMode.defaultMode.rawValue)
+        FSEventStreamSetDispatchQueue(stream, DispatchQueue.main)
         FSEventStreamStart(stream)
 
-        flushTimer = Timer.scheduledTimer(withTimeInterval: 10, repeats: true) { [weak self] _ in
-            Task { @MainActor in
-                self?.flush()
+        flushTimer = Timer.scheduledTimer(withTimeInterval: 10, repeats: true) { [self] _ in
+            MainActor.assumeIsolated {
+                self.flush()
             }
         }
 
@@ -125,6 +129,7 @@ final class FileCollector {
                    size >= 50_000 && size <= 20_000_000 {
                     if matchesScreenshotPattern(filename: filename) {
                         counters["screenshots", default: 0] += 1
+                        liveStats?.increment("screenshots")
                     } else {
                         maybeScreenshots += 1
                     }

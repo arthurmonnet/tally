@@ -27,22 +27,26 @@ final class SystemCollector {
             forName: NSWorkspace.willSleepNotification,
             object: nil,
             queue: .main
-        ) { [weak self] _ in
-            self?.handleSleep()
+        ) { [self] _ in
+            MainActor.assumeIsolated {
+                self.handleSleep()
+            }
         }
 
         wakeObserver = NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.didWakeNotification,
             object: nil,
             queue: .main
-        ) { [weak self] _ in
-            self?.handleWake()
+        ) { [self] _ in
+            MainActor.assumeIsolated {
+                self.handleWake()
+            }
         }
 
         // Poll every 60 seconds for RAM + dark mode + window count
-        pollTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
-            Task { @MainActor in
-                self?.poll()
+        pollTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [self] _ in
+            MainActor.assumeIsolated {
+                self.poll()
             }
         }
 

@@ -2,6 +2,7 @@ import SwiftUI
 
 struct MenuBarView: View {
     var pushScheduler: PushScheduler
+    var liveStats: LiveStats
     @Environment(\.openWindow) private var openWindow
     @State private var stats: [String: (int: Int64, float: Double)] = [:]
     @State private var refreshTimer: Timer?
@@ -106,37 +107,38 @@ struct MenuBarView: View {
 
     private var statsSection: some View {
         VStack(alignment: .leading, spacing: 0) {
-            expandableRow(icon: "keyboard", label: "Keystrokes", keys: ["keystrokes"], historyKey: "keystrokes")
-            expandableRow(icon: "cursorarrow.click.2", label: "Clicks", keys: ["clicks_left", "clicks_right"], historyKey: "clicks")
-            expandableRow(icon: "doc.on.clipboard", label: "Copy / Paste", keys: ["copy", "paste"], historyKey: "copy_paste")
-            expandableRow(icon: "arrow.uturn.backward", label: "Undos", keys: ["cmd_z"], historyKey: "undos")
+            // Real-time stats from LiveStats (instant CGEventTap updates)
+            expandableRow(icon: "keyboard", label: "Keystrokes", liveValue: liveStats.keystrokes, keys: ["keystrokes"], historyKey: "keystrokes")
+            expandableRow(icon: "cursorarrow.click.2", label: "Clicks", liveValue: liveStats.clicksLeft + liveStats.clicksRight, keys: ["clicks_left", "clicks_right"], historyKey: "clicks")
+            expandableRow(icon: "doc.on.clipboard", label: "Copy / Paste", liveValue: liveStats.copy + liveStats.paste, keys: ["copy", "paste"], historyKey: "copy_paste")
+            expandableRow(icon: "arrow.uturn.backward", label: "Undos", liveValue: liveStats.cmdZ, keys: ["cmd_z"], historyKey: "undos")
 
-            if let scrollM = stats["scroll_distance_m"]?.float, scrollM > 0 {
+            if liveStats.scrollDistanceM > 0 {
                 expandableRow(
                     icon: "arrow.up.arrow.down",
                     label: "Scroll",
-                    displayValue: formatDistance(scrollM),
+                    displayValue: formatDistance(liveStats.scrollDistanceM),
                     keys: ["scroll_distance_m"],
                     historyKey: "scroll"
                 )
             }
 
-            if let mouseM = stats["mouse_distance_m"]?.float, mouseM > 0 {
+            if liveStats.mouseDistanceM > 0 {
                 expandableRow(
                     icon: "computermouse",
                     label: "Mouse travel",
-                    displayValue: formatDistance(mouseM),
+                    displayValue: formatDistance(liveStats.mouseDistanceM),
                     keys: ["mouse_distance_m"],
                     historyKey: "mouse_travel"
                 )
             }
 
-            // Build stats merged into flat list
-            let screenshots = stats["screenshots"]?.int ?? 0
-            if screenshots > 0 {
-                expandableRow(icon: "camera.viewfinder", label: "Screenshots", keys: ["screenshots"], historyKey: "screenshots")
+            // Real-time file event stats
+            if liveStats.screenshots > 0 {
+                expandableRow(icon: "camera.viewfinder", label: "Screenshots", liveValue: liveStats.screenshots, keys: ["screenshots"], historyKey: "screenshots")
             }
 
+            // Polled stats (from DB, updated on timer)
             let commits = stats["git_commits"]?.int ?? 0
             if commits > 0 {
                 expandableRow(icon: "point.3.connected.trianglepath.dotted", label: "Commits", keys: ["git_commits"], historyKey: "commits")
@@ -260,11 +262,12 @@ struct MenuBarView: View {
     private func expandableRow(
         icon: String,
         label: String,
+        liveValue: Int64? = nil,
         displayValue: String? = nil,
         keys: [String],
         historyKey: String
     ) -> some View {
-        let value = displayValue ?? formatNumber(keys.reduce(Int64(0)) { $0 + (stats[$1]?.int ?? 0) })
+        let value = displayValue ?? formatNumber(liveValue ?? keys.reduce(Int64(0)) { $0 + (stats[$1]?.int ?? 0) })
         let isExpanded = expandedStat == historyKey
 
         VStack(spacing: 0) {

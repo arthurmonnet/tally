@@ -13,9 +13,9 @@ final class AchievementEngine {
         loadDefinitions()
 
         // Check every 60 seconds
-        checkTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
-            Task { @MainActor in
-                self?.checkAchievements()
+        checkTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [self] _ in
+            MainActor.assumeIsolated {
+                self.checkAchievements()
             }
         }
 
