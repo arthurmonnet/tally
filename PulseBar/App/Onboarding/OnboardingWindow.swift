@@ -13,8 +13,6 @@ struct OnboardingWindow: View {
                     PrivacyView(state: state)
                 case .accessibility:
                     AccessibilityView(state: state)
-                case .tools:
-                    ToolsView(state: state)
                 case .screenshots:
                     ScreenshotsView(state: state)
                 case .ready:

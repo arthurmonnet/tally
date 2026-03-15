@@ -4,9 +4,8 @@ enum OnboardingStep: Int, CaseIterable {
     case welcome = 0
     case privacy = 1
     case accessibility = 2
-    case tools = 3
-    case screenshots = 4
-    case ready = 5
+    case screenshots = 3
+    case ready = 4
 }
 
 extension Notification.Name {

@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PulseBar API Documentation</title>
+  <style>
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface2: #232733;
+      --border: #2e3345;
+      --text: #e1e4ed;
+      --text-muted: #8b90a0;
+      --accent: #4f8ff7;
+      --accent-dim: #2a4a8a;
+      --green: #34d399;
+      --red: #f87171;
+      --orange: #fbbf24;
+      --code-bg: #151821;
+      --radius: 10px;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.65;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Layout */
+    .wrapper { display: flex; min-height: 100vh; }
+    nav {
+      width: 260px;
+      padding: 32px 24px;
+      border-right: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+    }
+    main { flex: 1; max-width: 800px; padding: 48px 56px; }
+
+    /* Nav */
+    nav .logo { font-size: 15px; font-weight: 700; margin-bottom: 32px; letter-spacing: -0.3px; }
+    nav .logo span { color: var(--accent); }
+    nav a {
+      display: block;
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 13px;
+      padding: 6px 12px;
+      border-radius: 6px;
+      margin-bottom: 2px;
+      transition: all 0.15s;
+    }
+    nav a:hover { color: var(--text); background: var(--surface); }
+    nav .section-title {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--text-muted);
+      margin: 20px 0 8px 12px;
+    }
+
+    /* Content */
+    h1 { font-size: 32px; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 12px; }
+    h2 { font-size: 22px; font-weight: 600; letter-spacing: -0.3px; margin: 48px 0 16px; padding-top: 32px; border-top: 1px solid var(--border); }
+    h2:first-of-type { border-top: none; padding-top: 0; }
+    h3 { font-size: 16px; font-weight: 600; margin: 28px 0 12px; }
+    p { margin-bottom: 16px; color: var(--text-muted); font-size: 15px; }
+    p strong { color: var(--text); }
+
+    .subtitle { font-size: 17px; color: var(--text-muted); margin-bottom: 40px; }
+
+    /* Method badge */
+    .method {
+      display: inline-block;
+      font-size: 12px;
+      font-weight: 700;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      padding: 4px 10px;
+      border-radius: 5px;
+      vertical-align: middle;
+    }
+    .method.post { background: var(--accent-dim); color: var(--accent); }
+
+    .endpoint-url {
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 15px;
+      color: var(--text);
+      margin-left: 10px;
+      vertical-align: middle;
+    }
+
+    /* Code blocks */
+    pre {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px 24px;
+      overflow-x: auto;
+      margin: 12px 0 20px;
+      font-size: 13px;
+      line-height: 1.7;
+    }
+    code {
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 13px;
+    }
+    pre code { color: var(--text-muted); }
+    .key { color: #7dd3fc; }
+    .str { color: #86efac; }
+    .num { color: #fbbf24; }
+    .comment { color: #555d78; font-style: italic; }
+    .type { color: #c4b5fd; }
+
+    code:not(pre code) {
+      background: var(--surface2);
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-size: 13px;
+      color: var(--accent);
+    }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 12px 0 20px;
+      font-size: 14px;
+    }
+    th {
+      text-align: left;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--text-muted);
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    td {
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text-muted);
+    }
+    td code { font-size: 12px; }
+    tr:last-child td { border-bottom: none; }
+
+    /* Info cards */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px 24px;
+      margin: 16px 0;
+    }
+    .card.warn { border-left: 3px solid var(--orange); }
+    .card.info { border-left: 3px solid var(--accent); }
+    .card.success { border-left: 3px solid var(--green); }
+    .card p:last-child { margin-bottom: 0; }
+    .card-title { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 8px; }
+
+    /* Status codes */
+    .status { font-weight: 600; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 13px; }
+    .status.ok { color: var(--green); }
+    .status.err { color: var(--red); }
+
+    /* Lists */
+    ul { margin: 8px 0 16px 20px; }
+    li { color: var(--text-muted); font-size: 14px; margin-bottom: 6px; }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      .wrapper { flex-direction: column; }
+      nav { width: 100%; height: auto; position: static; border-right: none; border-bottom: 1px solid var(--border); padding: 20px; }
+      main { padding: 32px 24px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <nav>
+      <div class="logo">Pulse<span>Bar</span> API</div>
+
+      <div class="section-title">Overview</div>
+      <a href="#introduction">Introduction</a>
+      <a href="#authentication">Authentication</a>
+      <a href="#endpoint">Endpoint Setup</a>
+
+      <div class="section-title">Push API</div>
+      <a href="#request">Request Format</a>
+      <a href="#payload">Payload Schema</a>
+      <a href="#top-apps">Top Apps Object</a>
+      <a href="#response">Response</a>
+
+      <div class="section-title">Configuration</div>
+      <a href="#frequency">Push Frequency</a>
+      <a href="#retry">Retry &amp; Scheduling</a>
+
+      <div class="section-title">Reference</div>
+      <a href="#example">Full Example</a>
+      <a href="#errors">Error Reference</a>
+    </nav>
+
+    <main>
+      <h1 id="introduction">PulseBar Push API</h1>
+      <p class="subtitle">Receive your daily developer stats on any server via a simple JSON webhook.</p>
+
+      <p>PulseBar can push a daily summary of your activity to a remote HTTP endpoint. This page documents the payload format, authentication, and expected server behavior so you can build dashboards, team feeds, or personal analytics on top of your data.</p>
+
+      <div class="card info">
+        <p class="card-title">How it works</p>
+        <p>PulseBar collects stats locally (keystrokes, clicks, app usage, git activity, etc.) and periodically sends a <code>POST</code> request with a JSON payload to the endpoint you configure in the app.</p>
+      </div>
+
+      <!-- Authentication -->
+      <h2 id="authentication">Authentication</h2>
+      <p>Every request includes a <strong>Bearer token</strong> in the <code>Authorization</code> header. Set your token in the PulseBar settings panel &mdash; it is stored securely in the macOS Keychain.</p>
+
+      <pre><code><span class="key">Authorization</span>: Bearer <span class="str">&lt;your-api-token&gt;</span></code></pre>
+
+      <p>Your server should validate this token and reject requests with a missing or invalid token with a <code>401</code> status.</p>
+
+      <!-- Endpoint -->
+      <h2 id="endpoint">Endpoint Setup</h2>
+      <p>Configure your endpoint URL in <strong>PulseBar &rarr; Pulse API</strong> settings.</p>
+
+      <div class="card warn">
+        <p class="card-title">HTTPS Required</p>
+        <p>The endpoint must use <strong>HTTPS</strong>. The only exception is <code>localhost</code> / <code>127.0.0.1</code> for local development.</p>
+      </div>
+
+      <!-- Request -->
+      <h2 id="request">Request Format</h2>
+      <p><span class="method post">POST</span> <span class="endpoint-url">{your-endpoint-url}</span></p>
+
+      <h3>Headers</h3>
+      <table>
+        <thead><tr><th>Header</th><th>Value</th></tr></thead>
+        <tbody>
+          <tr><td><code>Content-Type</code></td><td><code>application/json</code></td></tr>
+          <tr><td><code>Authorization</code></td><td><code>Bearer &lt;token&gt;</code></td></tr>
+        </tbody>
+      </table>
+
+      <p>Request timeout is <strong>30 seconds</strong>.</p>
+
+      <!-- Payload -->
+      <h2 id="payload">Payload Schema</h2>
+
+      <table>
+        <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>version</code></td><td class="type">int</td><td>Schema version. Always <code>1</code>.</td></tr>
+          <tr><td><code>date</code></td><td class="type">string</td><td>Date of the summary (<code>YYYY-MM-DD</code>).</td></tr>
+          <tr><td><code>keystrokes</code></td><td class="type">int</td><td>Total keystrokes.</td></tr>
+          <tr><td><code>clicks</code></td><td class="type">int</td><td>Total mouse/trackpad clicks.</td></tr>
+          <tr><td><code>copy_paste</code></td><td class="type">int</td><td>Copy &amp; paste operations.</td></tr>
+          <tr><td><code>screenshots</code></td><td class="type">int</td><td>Screenshots taken.</td></tr>
+          <tr><td><code>cmd_z</code></td><td class="type">int</td><td>Undo actions (Cmd+Z).</td></tr>
+          <tr><td><code>launcher_opens</code></td><td class="type">int</td><td>Spotlight / launcher invocations.</td></tr>
+          <tr><td><code>app_switches</code></td><td class="type">int</td><td>App-switching events (Cmd+Tab, etc.).</td></tr>
+          <tr><td><code>scroll_distance_m</code></td><td class="type">double</td><td>Total scroll distance in meters.</td></tr>
+          <tr><td><code>mouse_distance_m</code></td><td class="type">double</td><td>Total mouse travel in meters.</td></tr>
+          <tr><td><code>dark_mode_minutes</code></td><td class="type">int</td><td>Minutes in dark mode.</td></tr>
+          <tr><td><code>light_mode_minutes</code></td><td class="type">int</td><td>Minutes in light mode.</td></tr>
+          <tr><td><code>top_apps</code></td><td class="type">array</td><td>Top apps by usage time. See <a href="#top-apps" style="color:var(--accent)">Top Apps</a>.</td></tr>
+          <tr><td><code>files_created</code></td><td class="type">object</td><td>Map of file extension &rarr; count (e.g. <code>{".swift": 3}</code>).</td></tr>
+          <tr><td><code>files_deleted</code></td><td class="type">int</td><td>Files deleted.</td></tr>
+          <tr><td><code>git_commits</code></td><td class="type">int</td><td>Git commits made.</td></tr>
+          <tr><td><code>git_stashes</code></td><td class="type">int</td><td>Git stashes created.</td></tr>
+          <tr><td><code>peak_ram_gb</code></td><td class="type">double</td><td>Peak RAM usage in GB.</td></tr>
+          <tr><td><code>active_hours</code></td><td class="type">double</td><td>Estimated active hours.</td></tr>
+          <tr><td><code>achievements_unlocked</code></td><td class="type">array</td><td>List of achievement IDs unlocked today.</td></tr>
+          <tr><td><code>fun_line</code></td><td class="type">string</td><td>Auto-generated fun fact about the day.</td></tr>
+        </tbody>
+      </table>
+
+      <!-- Top Apps -->
+      <h3 id="top-apps">Top Apps Object</h3>
+      <p>Each entry in the <code>top_apps</code> array:</p>
+      <table>
+        <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>name</code></td><td class="type">string</td><td>Application name.</td></tr>
+          <tr><td><code>minutes</code></td><td class="type">double</td><td>Active usage time in minutes.</td></tr>
+        </tbody>
+      </table>
+
+      <!-- Response -->
+      <h2 id="response">Expected Response</h2>
+      <p>Your server should return an appropriate HTTP status code:</p>
+      <table>
+        <thead><tr><th>Status</th><th>Meaning</th></tr></thead>
+        <tbody>
+          <tr><td><span class="status ok">200-299</span></td><td>Push accepted. PulseBar records success.</td></tr>
+          <tr><td><span class="status err">401</span></td><td>Invalid or missing API token.</td></tr>
+          <tr><td><span class="status err">4xx / 5xx</span></td><td>Push failed. PulseBar will retry once after 5 seconds.</td></tr>
+        </tbody>
+      </table>
+      <p>The response body is not inspected &mdash; only the status code matters.</p>
+
+      <!-- Frequency -->
+      <h2 id="frequency">Push Frequency</h2>
+      <p>Choose how often PulseBar sends stats:</p>
+      <table>
+        <thead><tr><th>Option</th><th>Interval</th></tr></thead>
+        <tbody>
+          <tr><td>Every 30 min</td><td>1,800 s</td></tr>
+          <tr><td>Every hour</td><td>3,600 s</td></tr>
+          <tr><td>Every 3 hours</td><td>10,800 s</td></tr>
+          <tr><td>Manual only</td><td>No auto-push; use the <em>Push Now</em> button.</td></tr>
+        </tbody>
+      </table>
+
+      <p>PulseBar also pushes automatically when the app quits and when the Mac wakes from sleep (if the interval has elapsed).</p>
+
+      <!-- Retry -->
+      <h2 id="retry">Retry &amp; Scheduling</h2>
+      <ul>
+        <li>If a push fails, PulseBar retries <strong>once</strong> after a 5-second delay.</li>
+        <li>If both attempts fail, the error is shown in the status area.</li>
+        <li>On wake-from-sleep, a push fires immediately if the configured interval has passed.</li>
+        <li>A final push is attempted on app quit (10 s timeout).</li>
+      </ul>
+
+      <!-- Full Example -->
+      <h2 id="example">Full Example</h2>
+      <h3>Request</h3>
+<pre><code><span class="comment">// POST https://yoursite.com/api/pulse</span>
+<span class="comment">// Authorization: Bearer sk-abc123</span>
+<span class="comment">// Content-Type: application/json</span>
+
+{
+  <span class="key">"version"</span>: <span class="num">1</span>,
+  <span class="key">"date"</span>: <span class="str">"2026-03-13"</span>,
+  <span class="key">"keystrokes"</span>: <span class="num">14832</span>,
+  <span class="key">"clicks"</span>: <span class="num">2341</span>,
+  <span class="key">"copy_paste"</span>: <span class="num">87</span>,
+  <span class="key">"screenshots"</span>: <span class="num">5</span>,
+  <span class="key">"cmd_z"</span>: <span class="num">42</span>,
+  <span class="key">"launcher_opens"</span>: <span class="num">23</span>,
+  <span class="key">"app_switches"</span>: <span class="num">318</span>,
+  <span class="key">"scroll_distance_m"</span>: <span class="num">127.4</span>,
+  <span class="key">"mouse_distance_m"</span>: <span class="num">84.2</span>,
+  <span class="key">"dark_mode_minutes"</span>: <span class="num">420</span>,
+  <span class="key">"light_mode_minutes"</span>: <span class="num">60</span>,
+  <span class="key">"top_apps"</span>: [
+    { <span class="key">"name"</span>: <span class="str">"Xcode"</span>, <span class="key">"minutes"</span>: <span class="num">185.3</span> },
+    { <span class="key">"name"</span>: <span class="str">"Safari"</span>, <span class="key">"minutes"</span>: <span class="num">94.1</span> },
+    { <span class="key">"name"</span>: <span class="str">"Terminal"</span>, <span class="key">"minutes"</span>: <span class="num">67.8</span> }
+  ],
+  <span class="key">"files_created"</span>: { <span class="str">".swift"</span>: <span class="num">4</span>, <span class="str">".json"</span>: <span class="num">1</span> },
+  <span class="key">"files_deleted"</span>: <span class="num">2</span>,
+  <span class="key">"git_commits"</span>: <span class="num">7</span>,
+  <span class="key">"git_stashes"</span>: <span class="num">1</span>,
+  <span class="key">"peak_ram_gb"</span>: <span class="num">12.4</span>,
+  <span class="key">"active_hours"</span>: <span class="num">8.0</span>,
+  <span class="key">"achievements_unlocked"</span>: [<span class="str">"streak_7d"</span>, <span class="str">"commits_100"</span>],
+  <span class="key">"fun_line"</span>: <span class="str">"You scrolled the height of the Eiffel Tower today!"</span>
+}</code></pre>
+
+      <h3>Minimal Server (Node.js)</h3>
+<pre><code><span class="comment">// server.js</span>
+<span class="key">const</span> express = require(<span class="str">"express"</span>);
+<span class="key">const</span> app = express();
+
+app.use(express.json());
+
+app.post(<span class="str">"/api/pulse"</span>, (req, res) => {
+  <span class="key">const</span> token = req.headers.authorization?.replace(<span class="str">"Bearer "</span>, <span class="str">""</span>);
+
+  <span class="key">if</span> (token !== process.env.PULSE_TOKEN) {
+    <span class="key">return</span> res.status(<span class="num">401</span>).json({ error: <span class="str">"Unauthorized"</span> });
+  }
+
+  console.log(<span class="str">`[${req.body.date}]`</span>, <span class="str">`${req.body.keystrokes} keystrokes`</span>);
+  <span class="comment">// Store req.body in your database</span>
+
+  res.status(<span class="num">200</span>).json({ ok: <span class="key">true</span> });
+});
+
+app.listen(<span class="num">3000</span>);
+</code></pre>
+
+      <!-- Errors -->
+      <h2 id="errors">Error Reference</h2>
+      <table>
+        <thead><tr><th>Error</th><th>Cause</th></tr></thead>
+        <tbody>
+          <tr><td>Invalid URL</td><td>Malformed endpoint URL.</td></tr>
+          <tr><td>HTTPS is required</td><td>Non-HTTPS URL (except localhost).</td></tr>
+          <tr><td>Not configured</td><td>Missing URL or frequency setting.</td></tr>
+          <tr><td>Server returned {code}</td><td>Your server returned a non-2xx status.</td></tr>
+          <tr><td>Push failed after retry</td><td>Both attempts failed.</td></tr>
+        </tbody>
+      </table>
+
+    </main>
+  </div>
+</body>
+</html>

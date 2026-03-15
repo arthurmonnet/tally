@@ -8,6 +8,11 @@ struct PulseBarApp: App {
     var body: some Scene {
         MenuBarExtra("Pulse", systemImage: "waveform.path.ecg") {
             MenuBarView(pushScheduler: appState.pushScheduler)
+                .onAppear {
+                    if !appState.isSetupComplete {
+                        openWindow(id: "onboarding")
+                    }
+                }
         }
         .menuBarExtraStyle(.window)
 
