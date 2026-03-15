@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 struct PulseAPISettingsView: View {
     @State var pushScheduler: PushScheduler
@@ -7,6 +8,8 @@ struct PulseAPISettingsView: View {
     @State private var frequency: PushFrequency = .oneHour
     @State private var isEnabled: Bool = false
     @State private var urlError: String?
+    @State private var isTesting: Bool = false
+    @State private var connectionTestResult: ConnectionResult?
 
     var body: some View {
         Form {
@@ -15,11 +18,31 @@ struct PulseAPISettingsView: View {
             }
 
             if isEnabled {
+                Section("Quick Setup") {
+                    Button(action: openVercelDeploy) {
+                        HStack {
+                            Image(systemName: "triangle.fill")
+                                .font(.caption)
+                            Text("Deploy to Vercel")
+                        }
+                    }
+                    .buttonStyle(.bordered)
+
+                    Text("Creates a free endpoint that receives your stats and serves them as JSON. No coding required.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
                 Section("Endpoint") {
-                    TextField("https://yoursite.com/api/pulse", text: $endpointUrl)
+                    Text("Paste your Vercel URL and the token you chose during deploy:")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    TextField("https://pulse-endpoint-xyz.vercel.app", text: $endpointUrl)
                         .textFieldStyle(.roundedBorder)
                         .onChange(of: endpointUrl) { _, newValue in
                             validateUrl(newValue)
+                            connectionTestResult = nil
                         }
 
                     if let urlError {
@@ -30,6 +53,40 @@ struct PulseAPISettingsView: View {
 
                     SecureField("API Token", text: $token)
                         .textFieldStyle(.roundedBorder)
+                        .onChange(of: token) { _, _ in
+                            connectionTestResult = nil
+                        }
+
+                    HStack {
+                        Button("Test Connection") {
+                            Task { await testConnection() }
+                        }
+                        .disabled(isTesting || !isConfigValid)
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+
+                        if isTesting {
+                            ProgressView()
+                                .controlSize(.small)
+                        }
+
+                        if let result = connectionTestResult {
+                            switch result {
+                            case .success:
+                                HStack(spacing: 4) {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .foregroundStyle(.green)
+                                    Text("Connected!")
+                                        .foregroundStyle(.green)
+                                }
+                                .font(.caption)
+                            case .error(let message):
+                                Text(message)
+                                    .font(.caption)
+                                    .foregroundStyle(.red)
+                            }
+                        }
+                    }
                 }
 
                 Section("Push Frequency") {
@@ -51,14 +108,14 @@ struct PulseAPISettingsView: View {
                 }
 
                 Section {
-                    Text("Set up an endpoint to receive your stats.\nYour token is stored securely in the macOS Keychain.")
+                    Text("Your token is stored securely in the macOS Keychain.\nThe app appends /api/pulse to your URL automatically.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
             }
         }
         .formStyle(.grouped)
-        .frame(width: 420, height: isEnabled ? 420 : 120)
+        .frame(width: 420, height: isEnabled ? 520 : 120)
         .padding()
         .onAppear { loadCurrentConfig() }
         .onChange(of: isEnabled) { _, newValue in
@@ -70,6 +127,35 @@ struct PulseAPISettingsView: View {
                     .disabled(isEnabled && !isConfigValid)
             }
         }
+    }
+
+    // MARK: - Vercel Deploy
+
+    private func openVercelDeploy() {
+        let deployURL = "https://vercel.com/new/clone?" + [
+            "repository-url=https://github.com/arthurmonnet/pulse-endpoint",
+            "env=PULSE_API_TOKEN",
+            "envDescription=Secret+token+for+Pulse+app.+Pick+any+random+string.",
+            "envLink=https://github.com/arthurmonnet/pulse-endpoint%23setup",
+            "project-name=pulse-endpoint",
+            "repository-name=pulse-endpoint",
+        ].joined(separator: "&")
+
+        if let url = URL(string: deployURL) {
+            NSWorkspace.shared.open(url)
+        }
+    }
+
+    // MARK: - Test Connection
+
+    private func testConnection() async {
+        isTesting = true
+        connectionTestResult = nil
+
+        let remotePush = RemotePush()
+        connectionTestResult = await remotePush.testConnection(url: endpointUrl, token: token)
+
+        isTesting = false
     }
 
     // MARK: - Status Views
@@ -134,7 +220,8 @@ struct PulseAPISettingsView: View {
             return
         }
 
-        guard let parsed = URL(string: url),
+        let normalized = RemotePush.normalizeURL(url)
+        guard let parsed = URL(string: normalized),
               let scheme = parsed.scheme?.lowercased(),
               parsed.host != nil else {
             urlError = "Enter a valid URL"
@@ -172,6 +259,8 @@ struct PulseAPISettingsView: View {
     private func saveConfig() {
         guard let existingConfig = UserConfig.load() else { return }
 
+        let normalizedUrl = isEnabled ? RemotePush.normalizeURL(endpointUrl) : nil
+
         let newConfig = UserConfig(
             codeEditor: existingConfig.codeEditor,
             screenshotTool: existingConfig.screenshotTool,
@@ -182,7 +271,7 @@ struct PulseAPISettingsView: View {
             gitRepos: existingConfig.gitRepos,
             llmApps: existingConfig.llmApps,
             llmBrowserTitles: existingConfig.llmBrowserTitles,
-            remotePushUrl: isEnabled ? endpointUrl : nil,
+            remotePushUrl: normalizedUrl,
             remotePushFrequency: isEnabled ? frequency : nil
         )
 
