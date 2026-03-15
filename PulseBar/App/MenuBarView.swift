@@ -9,11 +9,11 @@ struct MenuBarView: View {
     @State private var historyCache: [String: StatHistory] = [:]
     @State private var windowCount: Int64 = 0
     @State private var windowPeak: Int64 = 0
+    @State private var windowTimeline: [(time: String, value: Int64)] = []
     @State private var todayAchievementRecords: [AchievementRecord] = []
     @State private var pulsePhase: Bool = false
 
     private let statsEngine = StatsEngine()
-    private let expandableStats: Set<String> = ["keystrokes", "copy_paste", "scroll", "mouse_travel"]
 
     private static let achievementDefs: [AchievementDefinition] = {
         guard let url = Bundle.main.url(forResource: "achievements", withExtension: "json"),
@@ -53,9 +53,9 @@ struct MenuBarView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             headerRow
-            inputSection
+            statsSection
             appsSection
-            buildSection
+            windowsSection
             achievementsSection
             footerRow
         }
@@ -102,16 +102,14 @@ struct MenuBarView: View {
             .animation(.easeInOut(duration: 2).repeatForever(autoreverses: true), value: pulsePhase)
     }
 
-    // MARK: - INPUT Section
+    // MARK: - Stats Section (flat list, no headers)
 
-    private var inputSection: some View {
+    private var statsSection: some View {
         VStack(alignment: .leading, spacing: 0) {
-            SectionHeader(title: "INPUT")
-
             expandableRow(icon: "keyboard", label: "Keystrokes", keys: ["keystrokes"], historyKey: "keystrokes")
-            staticRow(icon: "cursorarrow.click.2", label: "Clicks", keys: ["clicks_left", "clicks_right"])
+            expandableRow(icon: "cursorarrow.click.2", label: "Clicks", keys: ["clicks_left", "clicks_right"], historyKey: "clicks")
             expandableRow(icon: "doc.on.clipboard", label: "Copy / Paste", keys: ["copy", "paste"], historyKey: "copy_paste")
-            staticRow(icon: "arrow.uturn.backward", label: "Undos", keys: ["cmd_z"])
+            expandableRow(icon: "arrow.uturn.backward", label: "Undos", keys: ["cmd_z"], historyKey: "undos")
 
             if let scrollM = stats["scroll_distance_m"]?.float, scrollM > 0 {
                 expandableRow(
@@ -132,6 +130,41 @@ struct MenuBarView: View {
                     historyKey: "mouse_travel"
                 )
             }
+
+            // Build stats merged into flat list
+            let screenshots = stats["screenshots"]?.int ?? 0
+            if screenshots > 0 {
+                expandableRow(icon: "camera.viewfinder", label: "Screenshots", keys: ["screenshots"], historyKey: "screenshots")
+            }
+
+            let totalFilesCreated = filesCreatedByExtension.values.reduce(Int64(0), +)
+            if totalFilesCreated > 0 {
+                expandableRow(icon: "doc.badge.plus", label: "Files created", keys: filesCreatedStatKeys, historyKey: "files_created")
+
+                let topExtensions = filesCreatedByExtension
+                    .sorted { $0.value > $1.value }
+                    .prefix(3)
+                    .map { ".\($0.key) \($0.value)" }
+                    .joined(separator: " \u{00B7} ")
+                if !topExtensions.isEmpty {
+                    Text(topExtensions)
+                        .font(.system(size: 10))
+                        .foregroundStyle(.secondary)
+                        .padding(.leading, 32)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 2)
+                }
+            }
+
+            let commits = stats["git_commits"]?.int ?? 0
+            if commits > 0 {
+                expandableRow(icon: "point.3.connected.trianglepath.dotted", label: "Commits", keys: ["git_commits"], historyKey: "commits")
+            }
+
+            let stashes = stats["git_stashes"]?.int ?? 0
+            if stashes > 0 {
+                StatRow(icon: "tray.and.arrow.down", label: "Stashes", value: formatNumber(stashes))
+            }
         }
     }
 
@@ -142,6 +175,7 @@ struct MenuBarView: View {
             SectionHeader(title: "APPS")
 
             let apps = topApps
+            let bundles = bundleMap
             if apps.isEmpty {
                 Text("No app data yet")
                     .font(.system(size: 13))
@@ -156,70 +190,31 @@ struct MenuBarView: View {
                     AppBar(
                         name: app.name,
                         time: formatDuration(minutes: Int(app.minutes)),
-                        proportion: proportion
+                        proportion: proportion,
+                        icon: AppIconCache.shared.icon(for: app.name, bundleID: bundles[app.name])
                     )
                     .padding(.vertical, 4)
                 }
             }
+        }
+    }
 
-            // Window count line
-            if windowCount > 0 {
-                let windowText: String = {
-                    if windowPeak <= windowCount {
-                        return "\(formatNumber(windowCount)) windows open (peak)"
-                    }
-                    return "\(formatNumber(windowCount)) windows open \u{00B7} peak \(formatNumber(windowPeak))"
-                }()
-                Text(windowText)
-                    .font(.system(size: 10))
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, 16)
-                    .padding(.top, 6)
+    // MARK: - WINDOWS Section
+
+    @ViewBuilder
+    private var windowsSection: some View {
+        if windowCount > 0 || !windowTimeline.isEmpty {
+            VStack(alignment: .leading, spacing: 0) {
+                SectionHeader(title: "WINDOWS")
+                WindowChart(
+                    points: windowTimeline,
+                    current: windowCount,
+                    peak: windowPeak
+                )
             }
         }
     }
 
-    // MARK: - BUILD Section
-
-    private var buildSection: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            let commits = stats["git_commits"]?.int ?? 0
-            let stashes = stats["git_stashes"]?.int ?? 0
-            let screenshots = stats["screenshots"]?.int ?? 0
-            let totalFilesCreated = filesCreatedByExtension.values.reduce(Int64(0), +)
-
-            if commits > 0 || stashes > 0 || screenshots > 0 || totalFilesCreated > 0 {
-                SectionHeader(title: "BUILD")
-
-                if commits > 0 {
-                    StatRow(icon: "point.3.connected.trianglepath.dotted", label: "Commits", value: formatNumber(commits))
-                }
-                if stashes > 0 {
-                    StatRow(icon: "tray.and.arrow.down", label: "Stashes", value: formatNumber(stashes))
-                }
-                if screenshots > 0 {
-                    StatRow(icon: "camera.viewfinder", label: "Screenshots", value: formatNumber(screenshots))
-                }
-                if totalFilesCreated > 0 {
-                    StatRow(icon: "doc.badge.plus", label: "Files created", value: formatNumber(totalFilesCreated))
-                    // File extension breakdown (top 3)
-                    let topExtensions = filesCreatedByExtension
-                        .sorted { $0.value > $1.value }
-                        .prefix(3)
-                        .map { ".\($0.key) \($0.value)" }
-                        .joined(separator: " \u{00B7} ")
-                    if !topExtensions.isEmpty {
-                        Text(topExtensions)
-                            .font(.system(size: 10))
-                            .foregroundStyle(.secondary)
-                            .padding(.leading, 32)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 2)
-                    }
-                }
-            }
-        }
-    }
 
     // MARK: - Achievements Section
 
@@ -264,7 +259,11 @@ struct MenuBarView: View {
                 Spacer()
 
                 Button("Settings") {
+                    NSApplication.shared.activate(ignoringOtherApps: true)
                     openWindow(id: "pulse-api-settings")
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        NSApplication.shared.activate(ignoringOtherApps: true)
+                    }
                 }
                 .buttonStyle(.link)
                 .font(.system(size: 10))
@@ -314,9 +313,8 @@ struct MenuBarView: View {
         }
     }
 
-    private func staticRow(icon: String, label: String, keys: [String]) -> some View {
-        let value = keys.reduce(Int64(0)) { $0 + (stats[$1]?.int ?? 0) }
-        return StatRow(icon: icon, label: label, value: formatNumber(value))
+    private var filesCreatedStatKeys: [String] {
+        filesCreatedByExtension.keys.map { "files_created:\($0)" }
     }
 
     // MARK: - Data
@@ -325,9 +323,11 @@ struct MenuBarView: View {
         do {
             stats = try Database.shared.todayStats()
 
-            let todayPrefix = Database.shared.todayDateString() + "T00:00:00"
+            let todayDate = Database.shared.todayDateString()
+            let todayPrefix = todayDate + "T00:00:00"
             windowCount = try Database.shared.latestValue(statKey: "window_count", since: todayPrefix)
             windowPeak = try Database.shared.peakValue(statKey: "window_count", since: todayPrefix)
+            windowTimeline = try Database.shared.timelineBuckets(statKey: "window_count", date: todayDate)
             todayAchievementRecords = try Database.shared.todayAchievements()
         } catch {
             print("[MenuBarView] Failed to load stats: \(error)")
