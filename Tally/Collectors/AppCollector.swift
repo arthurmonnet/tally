@@ -1,5 +1,8 @@
 import Foundation
 import AppKit
+import os
+
+private let logger = Logger(subsystem: "arthurmonnet.Tally", category: "AppCollector")
 
 @MainActor
 final class AppCollector {
@@ -11,7 +14,6 @@ final class AppCollector {
     // In-memory counters
     private var appSwitchCount: Int64 = 0
     private var appTimeBuckets: [String: TimeInterval] = [:]
-    private var nopeApps: [String: Int64] = [:]
     private var appBundleIDs: [String: String] = [:]  // displayName → bundleID
 
     private let db = Database.shared
@@ -44,7 +46,7 @@ final class AppCollector {
             }
         }
 
-        print("[AppCollector] Started")
+        logger.info("Started")
     }
 
     func stop() {
@@ -58,7 +60,7 @@ final class AppCollector {
         flushTimer?.invalidate()
         flushTimer = nil
 
-        print("[AppCollector] Stopped")
+        logger.info("Stopped")
     }
 
     private func handleAppSwitch(notification: Notification) {
@@ -69,10 +71,6 @@ final class AppCollector {
             let duration = now.timeIntervalSince(startTime)
             appTimeBuckets[previousApp, default: 0] += duration
 
-            // "Nope" detection: app was open for less than 3 seconds
-            if duration < 3.0 {
-                nopeApps[previousApp, default: 0] += 1
-            }
         }
 
         // Track new app
@@ -117,11 +115,6 @@ final class AppCollector {
         }
         appTimeBuckets.removeAll()
 
-        for (appName, count) in nopeApps {
-            events.append((statKey: "app_nope:\(appName)", valueInt: count, valueFloat: 0.0))
-        }
-        nopeApps.removeAll()
-
         // Store bundle ID mappings (valueInt=1 is a marker, the key encodes the mapping)
         for (appName, bundleID) in appBundleIDs {
             events.append((statKey: "app_bundle:\(appName):\(bundleID)", valueInt: 1, valueFloat: 0.0))
@@ -132,7 +125,7 @@ final class AppCollector {
         do {
             try db.upsertEvents(events)
         } catch {
-            print("[AppCollector] Failed to flush: \(error)")
+            logger.error("Failed to flush: \(error)")
         }
     }
 }

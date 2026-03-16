@@ -5,6 +5,8 @@ struct StatsEngine: Sendable {
 
     func todayStats() throws -> DailyStats {
         let raw = try db.todayStats()
+        let todayPrefix = db.todayDateString() + "T00:00:00"
+        let peakRam = try db.peakFloat(statKey: "peak_ram_gb", since: todayPrefix)
 
         // Build displayName → bundleID map from app_bundle entries
         var bundleMap: [String: String] = [:]
@@ -24,13 +26,6 @@ struct StatsEngine: Sendable {
             .filter { $0.minutes > 0 }
             .sorted { $0.minutes > $1.minutes }
 
-        let filesCreated = raw
-            .filter { $0.key.hasPrefix("files_created:") }
-            .reduce(into: [String: Int64]()) { result, entry in
-                let ext = String(entry.key.dropFirst("files_created:".count))
-                result[ext] = entry.value.int
-            }
-
         return DailyStats(
             keystrokes: raw["keystrokes"]?.int ?? 0,
             clicksLeft: raw["clicks_left"]?.int ?? 0,
@@ -38,22 +33,17 @@ struct StatsEngine: Sendable {
             copy: raw["copy"]?.int ?? 0,
             paste: raw["paste"]?.int ?? 0,
             cmdZ: raw["cmd_z"]?.int ?? 0,
-            cmdK: raw["cmd_k"]?.int ?? 0,
             launcherOpens: raw["launcher_opens"]?.int ?? 0,
             scrollDistanceM: raw["scroll_distance_m"]?.float ?? 0,
             mouseDistanceM: raw["mouse_distance_m"]?.float ?? 0,
             appSwitches: raw["app_switches"]?.int ?? 0,
             screenshots: raw["screenshots"]?.int ?? 0,
-            filesDeleted: raw["files_deleted"]?.int ?? 0,
-            gitCommits: raw["git_commits"]?.int ?? 0,
-            gitStashes: raw["git_stashes"]?.int ?? 0,
             darkModeM: raw["dark_mode_m"]?.int ?? 0,
             lightModeM: raw["light_mode_m"]?.int ?? 0,
-            peakRamGb: raw["peak_ram_gb"]?.float ?? 0,
+            peakRamGb: peakRam,
             sleepWakeQuick: raw["sleep_wake_quick"]?.int ?? 0,
             activeAfterMidnightM: raw["active_after_midnight_m"]?.int ?? 0,
-            topApps: topApps,
-            filesCreated: filesCreated
+            topApps: topApps
         )
     }
 
@@ -98,14 +88,6 @@ struct StatsEngine: Sendable {
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         let data = try encoder.encode(stats)
         return String(data: data, encoding: .utf8) ?? "{}"
-    }
-
-    func historyJSON(days: Int = 30) throws -> String {
-        let summaries = try db.historyDays(limit: days)
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = [.prettyPrinted]
-        let data = try encoder.encode(summaries)
-        return String(data: data, encoding: .utf8) ?? "[]"
     }
 
     func achievementsJSON() throws -> String {
@@ -181,13 +163,12 @@ struct StatHistoryPeak: Codable, Sendable {
 extension DailyStats {
     init(
         keystrokes: Int64, clicksLeft: Int64, clicksRight: Int64,
-        copy: Int64, paste: Int64, cmdZ: Int64, cmdK: Int64,
+        copy: Int64, paste: Int64, cmdZ: Int64,
         launcherOpens: Int64, scrollDistanceM: Double, mouseDistanceM: Double,
-        appSwitches: Int64, screenshots: Int64, filesDeleted: Int64,
-        gitCommits: Int64, gitStashes: Int64,
+        appSwitches: Int64, screenshots: Int64,
         darkModeM: Int64, lightModeM: Int64, peakRamGb: Double,
         sleepWakeQuick: Int64, activeAfterMidnightM: Int64,
-        topApps: [AppTimeEntry], filesCreated: [String: Int64]
+        topApps: [AppTimeEntry]
     ) {
         self.keystrokes = keystrokes
         self.clicksLeft = clicksLeft
@@ -195,21 +176,16 @@ extension DailyStats {
         self.copy = copy
         self.paste = paste
         self.cmdZ = cmdZ
-        self.cmdK = cmdK
         self.launcherOpens = launcherOpens
         self.scrollDistanceM = scrollDistanceM
         self.mouseDistanceM = mouseDistanceM
         self.appSwitches = appSwitches
         self.screenshots = screenshots
-        self.filesDeleted = filesDeleted
-        self.gitCommits = gitCommits
-        self.gitStashes = gitStashes
         self.darkModeM = darkModeM
         self.lightModeM = lightModeM
         self.peakRamGb = peakRamGb
         self.sleepWakeQuick = sleepWakeQuick
         self.activeAfterMidnightM = activeAfterMidnightM
         self.topApps = topApps
-        self.filesCreated = filesCreated
     }
 }

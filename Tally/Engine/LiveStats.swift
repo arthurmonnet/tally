@@ -1,4 +1,7 @@
 import Foundation
+import os
+
+private let logger = Logger(subsystem: "arthurmonnet.Tally", category: "LiveStats")
 
 /// In-memory cumulative counters for today's stats.
 /// CGEventTap and FSEvent callbacks increment these immediately,
@@ -14,7 +17,6 @@ final class LiveStats {
     var copy: Int64 = 0
     var paste: Int64 = 0
     var cmdZ: Int64 = 0
-    var cmdK: Int64 = 0
     var launcherOpens: Int64 = 0
     var scrollDistanceM: Double = 0
     var mouseDistanceM: Double = 0
@@ -35,13 +37,12 @@ final class LiveStats {
             copy = raw["copy"]?.int ?? 0
             paste = raw["paste"]?.int ?? 0
             cmdZ = raw["cmd_z"]?.int ?? 0
-            cmdK = raw["cmd_k"]?.int ?? 0
             launcherOpens = raw["launcher_opens"]?.int ?? 0
             scrollDistanceM = raw["scroll_distance_m"]?.float ?? 0
             mouseDistanceM = raw["mouse_distance_m"]?.float ?? 0
             screenshots = raw["screenshots"]?.int ?? 0
         } catch {
-            print("[LiveStats] Failed to seed from database: \(error)")
+            logger.error("Failed to seed from database: \(error)")
         }
     }
 
@@ -55,7 +56,6 @@ final class LiveStats {
         case "copy": copy += 1
         case "paste": paste += 1
         case "cmd_z": cmdZ += 1
-        case "cmd_k": cmdK += 1
         case "launcher_opens": launcherOpens += 1
         case "screenshots": screenshots += 1
         default: break

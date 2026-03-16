@@ -1,6 +1,9 @@
 import Foundation
 import AppKit
 import CoreGraphics
+import os
+
+private let logger = Logger(subsystem: "arthurmonnet.Tally", category: "SystemCollector")
 
 @MainActor
 final class SystemCollector {
@@ -50,7 +53,7 @@ final class SystemCollector {
             }
         }
 
-        print("[SystemCollector] Started")
+        logger.info("Started")
     }
 
     func stop() {
@@ -63,7 +66,7 @@ final class SystemCollector {
         }
         pollTimer?.invalidate()
         pollTimer = nil
-        print("[SystemCollector] Stopped")
+        logger.info("Stopped")
     }
 
     private func handleSleep() {
@@ -116,7 +119,7 @@ final class SystemCollector {
             do {
                 try db.setEvent(bucket: bucket, statKey: "window_count", valueInt: Int64(windowCount))
             } catch {
-                print("[SystemCollector] Failed to store window count: \(error)")
+                logger.error("Failed to store window count: \(error)")
             }
         }
 
@@ -140,17 +143,20 @@ final class SystemCollector {
         }
         counters.removeAll()
 
-        if peakRam > 0 {
-            events.append((statKey: "peak_ram_gb", valueInt: 0, valueFloat: peakRam))
-            peakRam = 0
+        if !events.isEmpty {
+            do {
+                try db.upsertEvents(events)
+            } catch {
+                logger.error("Failed to flush: \(error)")
+            }
         }
 
-        guard !events.isEmpty else { return }
-
-        do {
-            try db.upsertEvents(events)
-        } catch {
-            print("[SystemCollector] Failed to flush: \(error)")
+        if peakRam > 0 {
+            do {
+                try db.upsertMax([(statKey: "peak_ram_gb", valueFloat: peakRam)])
+            } catch {
+                logger.error("Failed to flush peak RAM: \(error)")
+            }
         }
     }
 

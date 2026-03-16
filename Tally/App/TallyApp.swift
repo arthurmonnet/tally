@@ -1,4 +1,7 @@
 import SwiftUI
+import os
+
+private let logger = Logger(subsystem: "arthurmonnet.Tally", category: "AppState")
 
 @main
 struct TallyApp: App {
@@ -17,7 +20,7 @@ struct TallyApp: App {
 
     var body: some Scene {
         MenuBarExtra("Tally", image: "MenuBarIcon") {
-            MenuBarView(pushScheduler: appState.pushScheduler, liveStats: appState.liveStats)
+            MenuBarView(pushScheduler: appState.pushScheduler, liveStats: appState.liveStats, punchline: appState.punchline)
         }
         .menuBarExtraStyle(.window)
 
@@ -65,14 +68,13 @@ final class AppState {
     var isSetupComplete: Bool
     let pushScheduler = PushScheduler()
     let liveStats = LiveStats()
+    let punchline = PunchlineGenerator()
     private var collectorsStarted = false
 
     private let inputCollector = InputCollector()
     private let appCollector = AppCollector()
     private let fileCollector = FileCollector()
-    private let gitCollector = GitCollector()
-    private let systemCollector = SystemCollector()
-    private let localServer = LocalServer()
+private let systemCollector = SystemCollector()
     private let achievementEngine = AchievementEngine()
 
     init() {
@@ -102,11 +104,7 @@ final class AppState {
         fileCollector.configure(config: config, liveStats: liveStats)
         fileCollector.start()
 
-        gitCollector.configure(repos: config.gitRepos)
-        gitCollector.start()
-
         systemCollector.start()
-        localServer.start()
         achievementEngine.start()
 
         // Start push scheduler if configured
@@ -121,6 +119,6 @@ final class AppState {
             pushScheduler.pushOnQuit()
         }
 
-        print("[AppState] All collectors started (setup complete: \(isSetupComplete))")
+        logger.info("All collectors started (setup complete: \(self.isSetupComplete))")
     }
 }

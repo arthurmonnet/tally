@@ -1,5 +1,8 @@
 import SwiftUI
 import AppKit
+import os
+
+private let logger = Logger(subsystem: "arthurmonnet.Tally", category: "TallyAPISettings")
 
 struct TallyAPISettingsView: View {
     @State var pushScheduler: PushScheduler
@@ -356,7 +359,6 @@ struct TallyAPISettingsView: View {
             screenshotPatterns: existingConfig.screenshotPatterns,
             launcher: existingConfig.launcher,
             launcherShortcut: existingConfig.launcherShortcut,
-            gitRepos: existingConfig.gitRepos,
             llmApps: existingConfig.llmApps,
             llmBrowserTitles: existingConfig.llmBrowserTitles,
             remotePushUrl: normalizedUrl,
@@ -366,7 +368,7 @@ struct TallyAPISettingsView: View {
         do {
             try newConfig.save()
         } catch {
-            print("[TallyAPISettings] Failed to save config: \(error)")
+            logger.error("Failed to save config: \(error)")
             return
         }
 

@@ -35,7 +35,6 @@ struct UserConfig: Codable, Sendable {
     let screenshotPatterns: [String]
     let launcher: String
     let launcherShortcut: String
-    let gitRepos: [String]
     let llmApps: [String]
     let llmBrowserTitles: [String]
     let remotePushUrl: String?
@@ -54,7 +53,6 @@ struct UserConfig: Codable, Sendable {
         case screenshotPatterns = "screenshot_patterns"
         case launcher
         case launcherShortcut = "launcher_shortcut"
-        case gitRepos = "git_repos"
         case llmApps = "llm_apps"
         case llmBrowserTitles = "llm_browser_titles"
         case remotePushUrl = "remote_push_url"
@@ -70,7 +68,6 @@ struct UserConfig: Codable, Sendable {
         screenshotPatterns: [String],
         launcher: String,
         launcherShortcut: String,
-        gitRepos: [String],
         llmApps: [String],
         llmBrowserTitles: [String],
         remotePushUrl: String?,
@@ -84,7 +81,6 @@ struct UserConfig: Codable, Sendable {
         self.screenshotPatterns = screenshotPatterns
         self.launcher = launcher
         self.launcherShortcut = launcherShortcut
-        self.gitRepos = gitRepos
         self.llmApps = llmApps
         self.llmBrowserTitles = llmBrowserTitles
         self.remotePushUrl = remotePushUrl
@@ -101,7 +97,6 @@ struct UserConfig: Codable, Sendable {
         screenshotPatterns = try container.decode([String].self, forKey: .screenshotPatterns)
         launcher = try container.decode(String.self, forKey: .launcher)
         launcherShortcut = try container.decode(String.self, forKey: .launcherShortcut)
-        gitRepos = try container.decode([String].self, forKey: .gitRepos)
         llmApps = try container.decode([String].self, forKey: .llmApps)
         llmBrowserTitles = try container.decode([String].self, forKey: .llmBrowserTitles)
         remotePushUrl = try container.decodeIfPresent(String.self, forKey: .remotePushUrl)
@@ -117,7 +112,6 @@ struct UserConfig: Codable, Sendable {
         screenshotPatterns: [],
         launcher: "spotlight",
         launcherShortcut: "cmd+space",
-        gitRepos: [],
         llmApps: [],
         llmBrowserTitles: ["claude.ai", "chatgpt.com"],
         remotePushUrl: nil,

@@ -59,8 +59,10 @@ struct RemotePush: Sendable {
             cmdZ: 0, launcherOpens: 0, appSwitches: 0,
             scrollDistanceM: 0, mouseDistanceM: 0,
             darkModeMinutes: 0, lightModeMinutes: 0,
-            topApps: [], filesCreated: [:], filesDeleted: 0,
-            gitCommits: 0, gitStashes: 0, peakRamGb: 0, activeHours: 0,
+            topApps: [],
+            filesCreated: [:], filesDeleted: 0,
+            gitCommits: 0, gitStashes: 0,
+            peakRamGb: 0, activeHours: 0,
             achievementsUnlocked: [], funLine: "Connection test",
             peakWindows: 0, avgWindows: 0, history: nil
         )
@@ -89,7 +91,7 @@ struct RemotePush: Sendable {
 
     // MARK: - Push
 
-    func pushDailySummary(url: String, token: String) async -> PushResult {
+    func pushDailySummary(url: String, token: String, punchline: String? = nil) async -> PushResult {
         // Normalize and build endpoint URL
         let baseURL = Self.normalizeURL(url)
         guard let endpoint = URL(string: baseURL + "/api/tally"),
@@ -107,7 +109,7 @@ struct RemotePush: Sendable {
         // Build payload
         let payload: RemotePushPayload
         do {
-            payload = try buildPayload()
+            payload = try buildPayload(punchline: punchline)
         } catch {
             return .failure("Failed to build stats: \(error.localizedDescription)")
         }
@@ -163,9 +165,10 @@ struct RemotePush: Sendable {
         }
     }
 
-    private func buildPayload() throws -> RemotePushPayload {
+    private func buildPayload(punchline: String? = nil) throws -> RemotePushPayload {
         let stats = try statsEngine.todayStats()
-        let funLine = try statsEngine.generateFunLine()
+        let templateLine = try statsEngine.generateFunLine()
+        let funLine = punchline ?? templateLine
         let db = Database.shared
         let achievements = try db.unlockedAchievements()
         let todayAchievements = achievements
@@ -181,6 +184,23 @@ struct RemotePush: Sendable {
         // 7-day history for major stats
         let history = try buildHistory()
 
+        // Attach base64 icons to top apps
+        let raw = try db.todayStats()
+        var bundleMap: [String: String] = [:]
+        for key in raw.keys where key.hasPrefix("app_bundle:") {
+            let rest = String(key.dropFirst("app_bundle:".count))
+            if let colonIdx = rest.lastIndex(of: ":") {
+                let name = String(rest[rest.startIndex..<colonIdx])
+                let bundleID = String(rest[rest.index(after: colonIdx)...])
+                bundleMap[name] = bundleID
+            }
+        }
+        let topAppsWithIcons = stats.topApps.map { app in
+            var entry = app
+            entry.icon = AppIconCache.shared.base64PNG(for: app.name, bundleID: bundleMap[app.name])
+            return entry
+        }
+
         return RemotePushPayload(
             version: 2,
             date: db.todayDateString(),
@@ -195,11 +215,11 @@ struct RemotePush: Sendable {
             mouseDistanceM: stats.mouseDistanceM,
             darkModeMinutes: stats.darkModeM,
             lightModeMinutes: stats.lightModeM,
-            topApps: stats.topApps,
-            filesCreated: stats.filesCreated,
-            filesDeleted: stats.filesDeleted,
-            gitCommits: stats.gitCommits,
-            gitStashes: stats.gitStashes,
+            topApps: topAppsWithIcons,
+            filesCreated: [:],
+            filesDeleted: 0,
+            gitCommits: 0,
+            gitStashes: 0,
             peakRamGb: stats.peakRamGb,
             activeHours: Double(stats.keystrokes > 0 ? 8 : 0),
             achievementsUnlocked: todayAchievements,
@@ -218,7 +238,6 @@ struct RemotePush: Sendable {
         let screenshotsH = try engine.history(for: "screenshots", days: 7)
         let copyPasteH = try engine.history(for: ["copy", "paste"], days: 7)
         let gitCommitsH = try engine.history(for: "git_commits", days: 7)
-
         return PushHistory(
             keystrokes: keystrokesH.days.map(\.value),
             clicks: clicksH.days.map(\.value),

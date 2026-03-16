@@ -1,5 +1,8 @@
 import AppKit
 import Foundation
+import os
+
+private let logger = Logger(subsystem: "arthurmonnet.Tally", category: "PushScheduler")
 
 @MainActor
 @Observable
@@ -49,7 +52,7 @@ final class PushScheduler {
 
         Task.detached {
             let result = await push.pushDailySummary(url: url, token: token)
-            print("[PushScheduler] Quit push: \(result.success ? "ok" : result.errorMessage ?? "failed")")
+            logger.info("Quit push: \(result.success ? "ok" : result.errorMessage ?? "failed")")
             semaphore.signal()
         }
 
@@ -86,7 +89,7 @@ final class PushScheduler {
         lastPushResult = result
         isPushing = false
 
-        print("[PushScheduler] Push \(result.success ? "succeeded" : "failed: \(result.errorMessage ?? "")")")
+        logger.info("Push \(result.success ? "succeeded" : "failed: \(result.errorMessage ?? "")")")
     }
 
     private func observeWake() {

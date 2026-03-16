@@ -1,5 +1,8 @@
 import Foundation
 import CoreServices
+import os
+
+private let logger = Logger(subsystem: "arthurmonnet.Tally", category: "FileCollector")
 
 @MainActor
 final class FileCollector {
@@ -45,7 +48,7 @@ final class FileCollector {
 
     func start() {
         guard !watchedPaths.isEmpty else {
-            print("[FileCollector] No paths to watch")
+            logger.warning("No paths to watch")
             return
         }
 
@@ -79,7 +82,7 @@ final class FileCollector {
         )
 
         guard let stream else {
-            print("[FileCollector] Failed to create FSEvent stream")
+            logger.error("Failed to create FSEvent stream")
             return
         }
 
@@ -92,7 +95,7 @@ final class FileCollector {
             }
         }
 
-        print("[FileCollector] Started watching \(watchedPaths)")
+        logger.info("Started watching \(self.watchedPaths)")
     }
 
     func stop() {
@@ -105,7 +108,7 @@ final class FileCollector {
         stream = nil
         flushTimer?.invalidate()
         flushTimer = nil
-        print("[FileCollector] Stopped")
+        logger.info("Stopped")
     }
 
     private func handleFSEvent(path: String) {
@@ -114,30 +117,21 @@ final class FileCollector {
         let filename = url.lastPathComponent
         let ext = url.pathExtension.lowercased()
 
-        // Check if file exists (created) or not (deleted)
-        if fm.fileExists(atPath: path) {
-            // File created — validate extension is a clean alphanumeric extension
-            if !ext.isEmpty, ext.count <= 10, ext.allSatisfy({ $0.isLetter || $0.isNumber }) {
-                counters["files_created:\(ext)", default: 0] += 1
-            }
+        guard fm.fileExists(atPath: path) else { return }
 
-            // Screenshot detection
-            let imageExtensions: Set<String> = ["png", "jpg", "jpeg", "webp", "gif"]
-            if imageExtensions.contains(ext) {
-                if let attrs = try? fm.attributesOfItem(atPath: path),
-                   let size = attrs[.size] as? UInt64,
-                   size >= 50_000 && size <= 20_000_000 {
-                    if matchesScreenshotPattern(filename: filename) {
-                        counters["screenshots", default: 0] += 1
-                        liveStats?.increment("screenshots")
-                    } else {
-                        maybeScreenshots += 1
-                    }
+        // Screenshot detection
+        let imageExtensions: Set<String> = ["png", "jpg", "jpeg", "webp", "gif"]
+        if imageExtensions.contains(ext) {
+            if let attrs = try? fm.attributesOfItem(atPath: path),
+               let size = attrs[.size] as? UInt64,
+               size >= 50_000 && size <= 20_000_000 {
+                if matchesScreenshotPattern(filename: filename) {
+                    counters["screenshots", default: 0] += 1
+                    liveStats?.increment("screenshots")
+                } else {
+                    maybeScreenshots += 1
                 }
             }
-        } else {
-            // File deleted
-            counters["files_deleted", default: 0] += 1
         }
     }
 
@@ -177,7 +171,7 @@ final class FileCollector {
         do {
             try db.upsertEvents(events)
         } catch {
-            print("[FileCollector] Failed to flush: \(error)")
+            logger.error("Failed to flush: \(error)")
         }
     }
 }

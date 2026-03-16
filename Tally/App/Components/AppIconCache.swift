@@ -24,6 +24,24 @@ final class AppIconCache: @unchecked Sendable {
         return resolved
     }
 
+    func base64PNG(for appName: String, bundleID: String? = nil, size: CGFloat = 32) -> String? {
+        let image = icon(for: appName, bundleID: bundleID)
+        let targetSize = NSSize(width: size, height: size)
+        let resized = NSImage(size: targetSize)
+        resized.lockFocus()
+        image.draw(in: NSRect(origin: .zero, size: targetSize),
+                   from: NSRect(origin: .zero, size: image.size),
+                   operation: .copy, fraction: 1.0)
+        resized.unlockFocus()
+
+        guard let tiff = resized.tiffRepresentation,
+              let bitmap = NSBitmapImageRep(data: tiff),
+              let png = bitmap.representation(using: .png, properties: [.compressionFactor: 0.8]) else {
+            return nil
+        }
+        return png.base64EncodedString()
+    }
+
     private func resolveIcon(appName: String, bundleID: String?) -> NSImage {
         // Method 1: Look up by bundle ID (most reliable)
         if let bundleID,

@@ -108,6 +108,23 @@ final class Database: Sendable {
         }
     }
 
+    func upsertMax(_ events: [(statKey: String, valueFloat: Double)]) throws {
+        let bucket = StatEvent.currentBucket()
+        try dbPool.write { db in
+            for event in events {
+                try db.execute(
+                    sql: """
+                        INSERT INTO events (bucket, stat_key, value_int, value_float)
+                        VALUES (?, ?, 0, ?)
+                        ON CONFLICT(bucket, stat_key) DO UPDATE SET
+                            value_float = MAX(value_float, excluded.value_float)
+                    """,
+                    arguments: [bucket, event.statKey, event.valueFloat]
+                )
+            }
+        }
+    }
+
     // MARK: - Query Today's Stats
 
     func todayStats() throws -> [String: (int: Int64, float: Double)] {
@@ -181,6 +198,20 @@ final class Database: Sendable {
                 db,
                 sql: """
                     SELECT COALESCE(MAX(value_int), 0) as peak FROM events
+                    WHERE stat_key = ? AND bucket >= ?
+                """,
+                arguments: [statKey, since]
+            )
+            return row?["peak"] ?? 0
+        }
+    }
+
+    func peakFloat(statKey: String, since: String) throws -> Double {
+        try dbPool.read { db in
+            let row = try Row.fetchOne(
+                db,
+                sql: """
+                    SELECT COALESCE(MAX(value_float), 0) as peak FROM events
                     WHERE stat_key = ? AND bucket >= ?
                 """,
                 arguments: [statKey, since]

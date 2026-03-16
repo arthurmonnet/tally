@@ -58,7 +58,6 @@ struct ReadyView: View {
                     .foregroundStyle(.secondary)
 
                 tipRow("Click the menubar icon for stats")
-                tipRow("\"Open Dashboard\" for the full view")
                 tipRow("Settings to adjust anytime")
             }
             .padding(.horizontal, 40)

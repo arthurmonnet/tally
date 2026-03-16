@@ -1,6 +1,9 @@
 import Foundation
 import CoreGraphics
 import AppKit
+import os
+
+private let logger = Logger(subsystem: "arthurmonnet.Tally", category: "InputCollector")
 
 @MainActor
 final class InputCollector {
@@ -52,7 +55,7 @@ final class InputCollector {
         if AXIsProcessTrusted() {
             startEventTap()
         } else {
-            print("[InputCollector] Accessibility permission not granted — staying dormant, polling every 3s")
+            logger.info("Accessibility permission not granted — staying dormant, polling every 3s")
             startAccessibilityPolling()
         }
     }
@@ -64,7 +67,7 @@ final class InputCollector {
                 if AXIsProcessTrusted() {
                     self.accessibilityRetryTimer?.invalidate()
                     self.accessibilityRetryTimer = nil
-                    print("[InputCollector] Accessibility permission granted — starting event tap")
+                    logger.info("Accessibility permission granted — starting event tap")
                     self.startEventTap()
                 }
             }
@@ -103,7 +106,7 @@ final class InputCollector {
         )
 
         guard let eventTap else {
-            print("[InputCollector] Failed to create event tap")
+            logger.error("Failed to create event tap")
             return
         }
 
@@ -118,7 +121,7 @@ final class InputCollector {
             }
         }
 
-        print("[InputCollector] Started")
+        logger.info("Started")
     }
 
     func stop() {
@@ -138,7 +141,7 @@ final class InputCollector {
         eventTap = nil
         runLoopSource = nil
 
-        print("[InputCollector] Stopped")
+        logger.info("Stopped")
     }
 
     private func handleEvent(type: CGEventType, event: CGEvent) {
@@ -156,7 +159,6 @@ final class InputCollector {
                          increment("paste")
                 case 8:  increment("cmd_c")    // C (copy)
                          increment("copy")
-                case 40: increment("cmd_k")    // K
                 default: break
                 }
 
@@ -227,7 +229,7 @@ final class InputCollector {
         do {
             try db.upsertEvents(events)
         } catch {
-            print("[InputCollector] Failed to flush: \(error)")
+            logger.error("Failed to flush: \(error)")
         }
     }
 }

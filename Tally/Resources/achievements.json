@@ -7,20 +7,6 @@
     "condition": { "stat": "copy", "threshold": 150, "period": "day" }
   },
   {
-    "id": "commit_cannon",
-    "name": "Commit Cannon",
-    "icon": "\ud83d\udca3",
-    "description": "20+ git commits in a day",
-    "condition": { "stat": "git_commits", "threshold": 20, "period": "day" }
-  },
-  {
-    "id": "markdown_hoarder",
-    "name": "Markdown Hoarder",
-    "icon": "\ud83d\udcdd",
-    "description": "15+ .md files created, 0 deleted",
-    "condition": { "stat": "files_created:md", "threshold": 15, "period": "day", "also": { "stat": "files_deleted", "max": 0 } }
-  },
-  {
     "id": "alt_tab_olympian",
     "name": "Alt-Tab Olympian",
     "icon": "\ud83c\udfc5",
@@ -47,20 +33,6 @@
     "icon": "\u26a1",
     "description": "100+ launcher opens in a day",
     "condition": { "stat": "launcher_opens", "threshold": 100, "period": "day" }
-  },
-  {
-    "id": "stash_panic",
-    "name": "Stash Panic",
-    "icon": "\ud83d\ude30",
-    "description": "5+ git stash in one hour",
-    "condition": { "stat": "git_stashes", "threshold": 5, "period": "hour" }
-  },
-  {
-    "id": "clean_freak",
-    "name": "Clean Freak",
-    "icon": "\ud83e\uddf9",
-    "description": "More files deleted than created in a day",
-    "condition": { "stat_compare": ["files_deleted", ">", "files_created_total"], "period": "day" }
   },
   {
     "id": "night_owl",

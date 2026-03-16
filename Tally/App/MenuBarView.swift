@@ -1,8 +1,12 @@
 import SwiftUI
+import os
+
+private let logger = Logger(subsystem: "arthurmonnet.Tally", category: "MenuBarView")
 
 struct MenuBarView: View {
     var pushScheduler: PushScheduler
     var liveStats: LiveStats
+    var punchline: PunchlineGenerator
     @Environment(\.openWindow) private var openWindow
     @State private var stats: [String: (int: Int64, float: Double)] = [:]
     @State private var refreshTimer: Timer?
@@ -11,6 +15,7 @@ struct MenuBarView: View {
     @State private var windowCount: Int64 = 0
     @State private var windowPeak: Int64 = 0
     @State private var windowTimeline: [(time: String, value: Int64)] = []
+    @State private var peakRamGb: Double = 0
     @State private var todayAchievementRecords: [AchievementRecord] = []
     @State private var animPhase: Bool = false
 
@@ -37,6 +42,17 @@ struct MenuBarView: View {
         return f
     }()
 
+    private static let appleIntelligenceGradient = LinearGradient(
+        colors: [
+            Color(red: 0.20, green: 0.50, blue: 0.95),
+            Color(red: 0.45, green: 0.30, blue: 0.90),
+            Color(red: 0.85, green: 0.25, blue: 0.40),
+            Color(red: 0.92, green: 0.45, blue: 0.15),
+        ],
+        startPoint: .leading,
+        endPoint: .trailing
+    )
+
     private static let isoFormatter = ISO8601DateFormatter()
 
     private static let dayInitialFormatter: DateFormatter = {
@@ -58,6 +74,7 @@ struct MenuBarView: View {
             appsSection
             windowsSection
             achievementsSection
+            punchlineSection
             footerRow
         }
         .frame(width: 320)
@@ -139,15 +156,21 @@ struct MenuBarView: View {
             }
 
             // Polled stats (from DB, updated on timer)
-            let commits = stats["git_commits"]?.int ?? 0
-            if commits > 0 {
-                expandableRow(icon: "point.3.connected.trianglepath.dotted", label: "Commits", keys: ["git_commits"], historyKey: "commits")
+            let appSwitches = stats["app_switches"]?.int ?? 0
+            if appSwitches > 0 {
+                StatRow(icon: "arrow.triangle.swap", label: "App switches", value: formatNumber(appSwitches))
             }
 
-            let stashes = stats["git_stashes"]?.int ?? 0
-            if stashes > 0 {
-                StatRow(icon: "tray.and.arrow.down", label: "Stashes", value: formatNumber(stashes))
+            let darkM = stats["dark_mode_m"]?.int ?? 0
+            let lightM = stats["light_mode_m"]?.int ?? 0
+            if darkM > 0 || lightM > 0 {
+                StatRow(icon: "circle.lefthalf.filled", label: "Dark mode", value: formatDuration(minutes: Int(darkM)))
             }
+
+            // Peak RAM hidden until stale summed values flush out
+            // if peakRamGb > 0 {
+            //     StatRow(icon: "memorychip", label: "Peak RAM", value: String(format: "%.1f GB", peakRamGb))
+            // }
         }
     }
 
@@ -168,7 +191,7 @@ struct MenuBarView: View {
                     .padding(.vertical, 4)
             } else {
                 let maxMinutes = apps.first?.minutes ?? 1
-                ForEach(Array(apps.prefix(5).enumerated()), id: \.offset) { _, app in
+                ForEach(apps.prefix(5), id: \.name) { app in
                     let proportion = maxMinutes > 0 ? Double(app.minutes) / Double(maxMinutes) : 0
                     AppBar(
                         name: app.name,
@@ -223,6 +246,34 @@ struct MenuBarView: View {
         }
     }
 
+    // MARK: - Punchline Section
+
+    @ViewBuilder
+    private var punchlineSection: some View {
+        if let line = punchline.currentLine {
+            Divider()
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(line)
+                    .font(.system(size: 11))
+                    .italic()
+                    .fixedSize(horizontal: false, vertical: true)
+                    .foregroundStyle(Self.appleIntelligenceGradient)
+                HStack(spacing: 3) {
+                    Image(systemName: "apple.intelligence")
+                        .font(.system(size: 8))
+                    Text("Apple Intelligence")
+                        .font(.system(size: 9))
+                }
+                .foregroundStyle(Self.appleIntelligenceGradient)
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 6)
+            .padding(.bottom, 2)
+        }
+    }
+
     // MARK: - Footer
 
     private var footerRow: some View {
@@ -231,25 +282,20 @@ struct MenuBarView: View {
                 .padding(.horizontal, 16)
                 .padding(.top, 8)
             HStack {
-                Button("Open Dashboard") {
-                    if let url = URL(string: "http://localhost:7777") {
-                        NSWorkspace.shared.open(url)
-                    }
-                }
-                .buttonStyle(.link)
-                .font(.system(size: 10))
-
                 Spacer()
 
-                Button("Settings") {
+                Button {
                     NSApplication.shared.activate(ignoringOtherApps: true)
                     openWindow(id: "tally-api-settings")
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                         NSApplication.shared.activate(ignoringOtherApps: true)
                     }
+                } label: {
+                    Image(systemName: "gearshape")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
                 }
-                .buttonStyle(.link)
-                .font(.system(size: 10))
+                .buttonStyle(.plain)
             }
             .padding(.horizontal, 16)
             .padding(.top, 8)
@@ -308,9 +354,13 @@ struct MenuBarView: View {
             windowCount = try Database.shared.latestValue(statKey: "window_count", since: todayPrefix)
             windowPeak = try Database.shared.peakValue(statKey: "window_count", since: todayPrefix)
             windowTimeline = try Database.shared.timelineBuckets(statKey: "window_count", date: todayDate)
+            peakRamGb = try Database.shared.peakFloat(statKey: "peak_ram_gb", since: todayPrefix)
             todayAchievementRecords = try Database.shared.todayAchievements()
+
+            let dailyStats = try statsEngine.todayStats()
+            punchline.maybeRegenerate(stats: dailyStats)
         } catch {
-            print("[MenuBarView] Failed to load stats: \(error)")
+            logger.error("Failed to load stats: \(error)")
         }
     }
 
@@ -334,7 +384,7 @@ struct MenuBarView: View {
             .map { (name: String($0.key.dropFirst("app_time:".count)), minutes: $0.value.int / 60) }
             .filter { AppFilter.shouldDisplay(name: $0.name, bundleID: bundles[$0.name]) }
             .filter { $0.minutes > 0 }
-            .sorted { $0.minutes > $1.minutes }
+            .sorted { $0.minutes != $1.minutes ? $0.minutes > $1.minutes : $0.name < $1.name }
     }
 
     // MARK: - Achievement Helpers
@@ -365,7 +415,7 @@ struct MenuBarView: View {
                     historyCache[historyKey] = history
                 }
             } catch {
-                print("[MenuBarView] Failed to load history: \(error)")
+                logger.error("Failed to load history: \(error)")
             }
         }
     }

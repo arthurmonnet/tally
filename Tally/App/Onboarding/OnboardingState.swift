@@ -1,4 +1,7 @@
 import SwiftUI
+import os
+
+private let logger = Logger(subsystem: "arthurmonnet.Tally", category: "OnboardingState")
 
 enum OnboardingStep: Int, CaseIterable {
     case welcome = 0
@@ -31,9 +34,6 @@ final class OnboardingState {
     ]
     var detectedTools: [DetectedScreenshotTool] = []
     var isScanning: Bool = false
-
-    // Git repos
-    var gitRepos: [URL] = []
 
     init() {
         // Check for post-permission-restart resume step first
@@ -86,7 +86,6 @@ final class OnboardingState {
             screenshotPatterns: patterns,
             launcher: selectedLauncher,
             launcherShortcut: launcherShortcutValue,
-            gitRepos: gitRepos.map(\.path),
             llmApps: Array(selectedLLMApps),
             llmBrowserTitles: llmTitles,
             remotePushUrl: nil,
@@ -98,7 +97,7 @@ final class OnboardingState {
         do {
             try config.save()
         } catch {
-            print("[OnboardingState] Failed to save config: \(error)")
+            logger.error("Failed to save config: \(error)")
         }
 
         UserDefaults.standard.removeObject(forKey: "onboarding_current_step")

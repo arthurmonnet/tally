@@ -1,5 +1,8 @@
 import Foundation
 import UserNotifications
+import os
+
+private let logger = Logger(subsystem: "arthurmonnet.Tally", category: "AchievementEngine")
 
 @MainActor
 final class AchievementEngine {
@@ -22,26 +25,26 @@ final class AchievementEngine {
         // Request notification permission
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
 
-        print("[AchievementEngine] Started with \(definitions.count) definitions")
+        logger.info("Started with \(self.definitions.count) definitions")
     }
 
     func stop() {
         checkTimer?.invalidate()
         checkTimer = nil
-        print("[AchievementEngine] Stopped")
+        logger.info("Stopped")
     }
 
     private func loadDefinitions() {
         guard let url = Bundle.main.url(forResource: "achievements", withExtension: "json"),
               let data = try? Data(contentsOf: url) else {
-            print("[AchievementEngine] No achievements.json found in bundle")
+            logger.warning("No achievements.json found in bundle")
             return
         }
 
         do {
             definitions = try JSONDecoder().decode([AchievementDefinition].self, from: data)
         } catch {
-            print("[AchievementEngine] Failed to decode achievements: \(error)")
+            logger.error("Failed to decode achievements: \(error)")
         }
     }
 
@@ -58,11 +61,11 @@ final class AchievementEngine {
                         triggerValue: conditionTriggerValue(definition.condition, stats: stats)
                     )
                     sendNotification(for: definition)
-                    print("[AchievementEngine] Unlocked: \(definition.name)")
+                    logger.info("Unlocked: \(definition.name)")
                 }
             }
         } catch {
-            print("[AchievementEngine] Error checking: \(error)")
+            logger.error("Error checking: \(error)")
         }
     }
 
@@ -106,28 +109,17 @@ final class AchievementEngine {
         case "copy": return Double(stats.copy)
         case "paste": return Double(stats.paste)
         case "cmd_z": return Double(stats.cmdZ)
-        case "cmd_k": return Double(stats.cmdK)
         case "launcher_opens": return Double(stats.launcherOpens)
         case "scroll_distance_m": return stats.scrollDistanceM
         case "mouse_distance_m": return stats.mouseDistanceM
         case "app_switches": return Double(stats.appSwitches)
         case "screenshots": return Double(stats.screenshots)
-        case "files_deleted": return Double(stats.filesDeleted)
-        case "git_commits": return Double(stats.gitCommits)
-        case "git_stashes": return Double(stats.gitStashes)
         case "dark_mode_m": return Double(stats.darkModeM)
         case "light_mode_m": return Double(stats.lightModeM)
         case "peak_ram_gb": return stats.peakRamGb
         case "sleep_wake_quick": return Double(stats.sleepWakeQuick)
         case "active_time_after_midnight_m", "active_after_midnight_m": return Double(stats.activeAfterMidnightM)
-        case "files_created_total":
-            return Double(stats.filesCreated.values.reduce(0, +))
         default:
-            // Handle files_created:ext
-            if key.hasPrefix("files_created:") {
-                let ext = String(key.dropFirst("files_created:".count))
-                return Double(stats.filesCreated[ext] ?? 0)
-            }
             return 0
         }
     }
