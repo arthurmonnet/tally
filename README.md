@@ -2,6 +2,10 @@
 
 A macOS menu bar app that quietly tracks your developer activity — keystrokes, clicks, app usage, screenshots, and system stats — then surfaces it all in a compact popover with sparkline charts.
 
+<p align="center">
+  <img src="screenshot.png" width="360" alt="Tally menu bar popover">
+</p>
+
 ## What it tracks
 
 | Category | Metrics |
