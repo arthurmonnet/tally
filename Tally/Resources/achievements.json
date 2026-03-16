@@ -1,0 +1,58 @@
+[
+  {
+    "id": "clipboard_dj",
+    "name": "Clipboard DJ",
+    "icon": "\ud83c\udfa7",
+    "description": "150+ copy/paste in a day",
+    "condition": { "stat": "copy", "threshold": 150, "period": "day" }
+  },
+  {
+    "id": "alt_tab_olympian",
+    "name": "Alt-Tab Olympian",
+    "icon": "\ud83c\udfc5",
+    "description": "500+ app switches in a day",
+    "condition": { "stat": "app_switches", "threshold": 500, "period": "day" }
+  },
+  {
+    "id": "ghost_typer",
+    "name": "Ghost Typer",
+    "icon": "\ud83d\udc7b",
+    "description": "80,000+ keystrokes in a day",
+    "condition": { "stat": "keystrokes", "threshold": 80000, "period": "day" }
+  },
+  {
+    "id": "scroll_infinity",
+    "name": "Scroll Infinity",
+    "icon": "\u221e",
+    "description": "500m+ scroll distance in a day",
+    "condition": { "stat": "scroll_distance_m", "threshold": 500, "period": "day" }
+  },
+  {
+    "id": "raycast_reflex",
+    "name": "Raycast Reflex",
+    "icon": "\u26a1",
+    "description": "100+ launcher opens in a day",
+    "condition": { "stat": "launcher_opens", "threshold": 100, "period": "day" }
+  },
+  {
+    "id": "night_owl",
+    "name": "Night Owl",
+    "icon": "\ud83e\udd89",
+    "description": "4h+ activity after midnight",
+    "condition": { "stat": "active_time_after_midnight_m", "threshold": 240, "period": "day" }
+  },
+  {
+    "id": "one_more_thing",
+    "name": "One More Thing",
+    "icon": "\ud83d\udca1",
+    "description": "Reopened laptop within 5 minutes of closing",
+    "condition": { "stat": "sleep_wake_quick", "threshold": 1, "period": "day" }
+  },
+  {
+    "id": "regret_machine",
+    "name": "Regret Machine",
+    "icon": "\u23ea",
+    "description": "200+ Cmd+Z in a day",
+    "condition": { "stat": "cmd_z", "threshold": 200, "period": "day" }
+  }
+]

@@ -1,0 +1,42 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Xcode
+build/
+DerivedData/
+*.xcodeproj/project.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
+*.xcworkspace/xcuserdata/
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+*.moved-aside
+xcuserdata/
+
+# Swift Package Manager
+.build/
+.swiftpm/
+Package.resolved
+
+# CocoaPods (if ever used)
+Pods/
+
+# Archives & exports
+*.xcarchive
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# Secrets & config
+scripts/release-config.sh
+*.env
+*.env.*
+
+# IDE
+*.swp
+*~
+.vscode/
+.idea/
