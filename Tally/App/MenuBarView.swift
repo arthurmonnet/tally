@@ -16,19 +16,9 @@ struct MenuBarView: View {
     @State private var windowPeak: Int64 = 0
     @State private var windowTimeline: [(time: String, value: Int64)] = []
     @State private var peakRamGb: Double = 0
-    @State private var todayAchievementRecords: [AchievementRecord] = []
     @State private var animPhase: Bool = false
 
     private let statsEngine = StatsEngine()
-
-    private static let achievementDefs: [AchievementDefinition] = {
-        guard let url = Bundle.main.url(forResource: "achievements", withExtension: "json"),
-              let data = try? Data(contentsOf: url),
-              let defs = try? JSONDecoder().decode([AchievementDefinition].self, from: data) else {
-            return []
-        }
-        return defs
-    }()
 
     private static let numberFormatter: NumberFormatter = {
         let f = NumberFormatter()
@@ -53,8 +43,6 @@ struct MenuBarView: View {
         endPoint: .trailing
     )
 
-    private static let isoFormatter = ISO8601DateFormatter()
-
     private static let dayInitialFormatter: DateFormatter = {
         let f = DateFormatter()
         f.dateFormat = "EEEEE"
@@ -73,7 +61,6 @@ struct MenuBarView: View {
             statsSection
             appsSection
             windowsSection
-            achievementsSection
             punchlineSection
             footerRow
         }
@@ -222,30 +209,6 @@ struct MenuBarView: View {
     }
 
 
-    // MARK: - Achievements Section
-
-    @ViewBuilder
-    private var achievementsSection: some View {
-        if !todayUnlockedAchievements.isEmpty {
-            VStack(spacing: 4) {
-                Divider()
-                    .padding(.horizontal, 16)
-                    .padding(.top, 8)
-                HStack(spacing: 12) {
-                    Spacer()
-                    ForEach(todayUnlockedAchievements, id: \.id) { achievement in
-                        let isRecent = isRecentlyUnlocked(achievement)
-                        Text("\(achievement.icon) \(achievement.name)")
-                            .font(.system(size: 10))
-                            .foregroundStyle(isRecent ? .primary : .secondary)
-                    }
-                    Spacer()
-                }
-                .padding(.vertical, 4)
-            }
-        }
-    }
-
     // MARK: - Punchline Section
 
     @ViewBuilder
@@ -324,12 +287,15 @@ struct MenuBarView: View {
                 expandable: true,
                 isExpanded: isExpanded
             ) {
-                withAnimation(.easeOut(duration: 0.2)) {
-                    if expandedStat == historyKey {
+                if expandedStat == historyKey {
+                    withAnimation(.easeOut(duration: 0.2)) {
                         expandedStat = nil
-                    } else {
-                        expandedStat = historyKey
-                        loadHistory(for: keys, historyKey: historyKey)
+                    }
+                } else {
+                    loadHistory(for: keys, historyKey: historyKey) {
+                        withAnimation(.easeOut(duration: 0.2)) {
+                            expandedStat = historyKey
+                        }
                     }
                 }
             }
@@ -338,7 +304,7 @@ struct MenuBarView: View {
                 SparklineChart(history: history)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 6)
-                    .transition(.opacity.combined(with: .move(edge: .top)))
+                    .transition(.opacity)
             }
         }
     }
@@ -355,8 +321,6 @@ struct MenuBarView: View {
             windowPeak = try Database.shared.peakValue(statKey: "window_count", since: todayPrefix)
             windowTimeline = try Database.shared.timelineBuckets(statKey: "window_count", date: todayDate)
             peakRamGb = try Database.shared.peakFloat(statKey: "peak_ram_gb", since: todayPrefix)
-            todayAchievementRecords = try Database.shared.todayAchievements()
-
             let dailyStats = try statsEngine.todayStats()
             punchline.maybeRegenerate(stats: dailyStats)
         } catch {
@@ -387,32 +351,19 @@ struct MenuBarView: View {
             .sorted { $0.minutes != $1.minutes ? $0.minutes > $1.minutes : $0.name < $1.name }
     }
 
-    // MARK: - Achievement Helpers
-
-    private var todayUnlockedAchievements: [AchievementDefinition] {
-        let unlockedIDs = Set(todayAchievementRecords.map(\.id))
-        return Self.achievementDefs.filter { unlockedIDs.contains($0.id) }
-    }
-
-    private func isRecentlyUnlocked(_ achievement: AchievementDefinition) -> Bool {
-        guard let record = todayAchievementRecords.first(where: { $0.id == achievement.id }) else {
-            return false
-        }
-        guard let unlockedDate = Self.isoFormatter.date(from: record.unlockedAt) else {
-            return false
-        }
-        return Date().timeIntervalSince(unlockedDate) < 3600  // Within last hour
-    }
-
     // MARK: - History
 
-    private func loadHistory(for keys: [String], historyKey: String) {
-        guard historyCache[historyKey] == nil else { return }
+    private func loadHistory(for keys: [String], historyKey: String, then completion: @escaping () -> Void) {
+        if historyCache[historyKey] != nil {
+            completion()
+            return
+        }
         Task {
             do {
                 let history = try statsEngine.history(for: keys, days: 7)
                 await MainActor.run {
                     historyCache[historyKey] = history
+                    completion()
                 }
             } catch {
                 logger.error("Failed to load history: \(error)")
