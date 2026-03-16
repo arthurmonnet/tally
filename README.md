@@ -27,12 +27,18 @@ Everything is stored locally in SQLite. Nothing leaves your machine unless you c
 - macOS 14+ (Sonoma or later)
 - **Accessibility permission** — required for keyboard and mouse event monitoring via CGEventTap
 
-## Getting started
+## Install
+
+1. Download **Tally.dmg** from the [latest release](https://github.com/arthurmonnet/Tally/releases/latest)
+2. Open the DMG and drag Tally to Applications
+3. Launch Tally — complete the onboarding wizard and grant Accessibility permission
+4. Tally moves to the menu bar and starts tracking
+
+## Build from source
 
 1. Open `Tally.xcodeproj` in Xcode
 2. Build and run (Cmd+R)
 3. Complete the onboarding wizard (welcome, privacy, accessibility, screenshots, ready)
-4. Tally moves to the menu bar and starts tracking
 
 ## Architecture
 
