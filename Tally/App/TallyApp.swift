@@ -3,64 +3,102 @@ import os
 
 private let logger = Logger(subsystem: "arthurmonnet.Tally", category: "AppState")
 
-@main
-struct TallyApp: App {
-    @State private var appState = AppState()
+// MARK: - App Delegate
 
-    init() {
-        // On first launch, show as a regular app (dock icon visible)
-        // so the onboarding window appears in the foreground.
-        if !(UserConfig.load()?.onboardingCompleted ?? false) {
-            NSApplication.shared.setActivationPolicy(.regular)
-            DispatchQueue.main.async {
-                NSApplication.shared.activate(ignoringOtherApps: true)
-            }
+@MainActor
+final class TallyAppDelegate: NSObject, NSApplicationDelegate {
+    let appState = AppState()
+    private var onboardingWindow: NSWindow?
+
+    nonisolated func applicationDidFinishLaunching(_ notification: Notification) {
+        DispatchQueue.main.async {
+            self.handleLaunch()
         }
     }
 
+    private func handleLaunch() {
+        guard !appState.isSetupComplete else { return }
+        showOnboarding()
+    }
+
+    nonisolated func applicationShouldHandleReopen(
+        _ sender: NSApplication,
+        hasVisibleWindows flag: Bool
+    ) -> Bool {
+        if !flag {
+            DispatchQueue.main.async {
+                if !self.appState.isSetupComplete {
+                    self.showOnboarding()
+                }
+            }
+        }
+        return true
+    }
+
+    func showOnboarding() {
+        // If window already exists, just bring it forward
+        if let existing = onboardingWindow, existing.isVisible {
+            existing.makeKeyAndOrderFront(nil)
+            NSApplication.shared.activate(ignoringOtherApps: true)
+            return
+        }
+
+        NSApplication.shared.setActivationPolicy(.regular)
+
+        let view = OnboardingWindow(liveStats: appState.liveStats)
+            .onReceive(NotificationCenter.default.publisher(for: .onboardingCompleted)) { [weak self] _ in
+                self?.completeOnboarding()
+            }
+
+        let hosting = NSHostingController(rootView: view)
+        let window = NSWindow(contentViewController: hosting)
+        window.setContentSize(NSSize(width: 480, height: 520))
+        window.styleMask = [.titled, .closable]
+        window.titlebarAppearsTransparent = true
+        window.titleVisibility = .hidden
+        window.isReleasedWhenClosed = false
+        window.center()
+        window.makeKeyAndOrderFront(nil)
+        NSApplication.shared.activate(ignoringOtherApps: true)
+
+        onboardingWindow = window
+    }
+
+    private func completeOnboarding() {
+        appState.isSetupComplete = true
+        appState.startAll()
+
+        onboardingWindow?.close()
+        onboardingWindow = nil
+        NSApplication.shared.setActivationPolicy(.accessory)
+    }
+}
+
+// MARK: - App Entry Point
+
+@main
+struct TallyApp: App {
+    @NSApplicationDelegateAdaptor(TallyAppDelegate.self) var delegate
+
     var body: some Scene {
         MenuBarExtra("Tally", image: "MenuBarIcon") {
-            MenuBarView(pushScheduler: appState.pushScheduler, liveStats: appState.liveStats, punchline: appState.punchline)
+            MenuBarView(
+                pushScheduler: delegate.appState.pushScheduler,
+                liveStats: delegate.appState.liveStats,
+                punchline: delegate.appState.punchline
+            )
         }
         .menuBarExtraStyle(.window)
 
-        Window("Tally Setup", id: "onboarding") {
-            OnboardingWindow(liveStats: appState.liveStats)
-                .onReceive(NotificationCenter.default.publisher(for: .onboardingCompleted)) { _ in
-                    appState.isSetupComplete = true
-                    appState.startAll()
-
-                    // Close the onboarding window and drop into menubar-only mode
-                    NSApplication.shared.windows
-                        .first { $0.identifier?.rawValue == "onboarding" }?
-                        .close()
-                    NSApplication.shared.setActivationPolicy(.accessory)
-                }
-                .onAppear {
-                    guard !appState.isSetupComplete else { return }
-                    // Ensure the onboarding window is visible and focused
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                        if let window = NSApplication.shared.windows.first(where: {
-                            $0.identifier?.rawValue == "onboarding"
-                        }) {
-                            window.makeKeyAndOrderFront(nil)
-                            NSApplication.shared.activate(ignoringOtherApps: true)
-                        }
-                    }
-                }
-        }
-        .windowStyle(.hiddenTitleBar)
-        .windowResizability(.contentSize)
-        .defaultPosition(.center)
-        .defaultSize(width: 480, height: 520)
-
         Window("Tally API", id: "tally-api-settings") {
-            TallyAPISettingsView(pushScheduler: appState.pushScheduler)
+            TallyAPISettingsView(pushScheduler: delegate.appState.pushScheduler)
         }
         .windowResizability(.contentSize)
         .defaultSize(width: 480, height: 120)
     }
 }
+
+// MARK: - App State
 
 @MainActor
 @Observable
@@ -74,7 +112,7 @@ final class AppState {
     private let inputCollector = InputCollector()
     private let appCollector = AppCollector()
     private let fileCollector = FileCollector()
-private let systemCollector = SystemCollector()
+    private let systemCollector = SystemCollector()
     private let achievementEngine = AchievementEngine()
 
     init() {
@@ -87,7 +125,14 @@ private let systemCollector = SystemCollector()
 
     func startAll() {
         let config = UserConfig.load() ?? UserConfig.defaultConfig
-        startCollectors(config: config)
+
+        // If collectors already started (pre-onboarding), start FileCollector now
+        if collectorsStarted {
+            fileCollector.configure(config: config, liveStats: liveStats)
+            fileCollector.start()
+        } else {
+            startCollectors(config: config)
+        }
     }
 
     private func startCollectors(config: UserConfig) {
@@ -101,8 +146,12 @@ private let systemCollector = SystemCollector()
 
         appCollector.start()
 
-        fileCollector.configure(config: config, liveStats: liveStats)
-        fileCollector.start()
+        // Defer FileCollector until onboarding completes — its auto-discovery
+        // of ~/Desktop etc. triggers a Finder permission dialog too early.
+        if isSetupComplete {
+            fileCollector.configure(config: config, liveStats: liveStats)
+            fileCollector.start()
+        }
 
         systemCollector.start()
         achievementEngine.start()

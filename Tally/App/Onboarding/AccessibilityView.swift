@@ -72,7 +72,6 @@ struct AccessibilityView: View {
 
             Button("Grant Access") {
                 requestPermission()
-                openAccessibilitySettings()
                 permissionState = .waitingForUser
                 startPolling()
             }

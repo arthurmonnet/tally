@@ -7,7 +7,7 @@ struct WelcomeView: View {
         VStack(spacing: 24) {
             Spacer()
 
-            Image(systemName: "waveform.path.ecg")
+            Image(systemName: "chart.bar.fill")
                 .font(.system(size: 48, weight: .light))
                 .foregroundStyle(.primary)
 
