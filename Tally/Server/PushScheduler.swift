@@ -41,7 +41,7 @@ final class PushScheduler {
         await performPush()
     }
 
-    nonisolated func pushOnQuit() {
+    func pushOnQuit() {
         guard let config = UserConfig.load(),
               config.isRemotePushEnabled,
               let url = config.remotePushUrl,
@@ -52,7 +52,8 @@ final class PushScheduler {
 
         Task.detached {
             let result = await push.pushDailySummary(url: url, token: token)
-            logger.info("Quit push: \(result.success ? "ok" : result.errorMessage ?? "failed")")
+            let detachedLogger = Logger(subsystem: "arthurmonnet.Tally", category: "PushScheduler")
+            detachedLogger.info("Quit push: \(result.success ? "ok" : result.errorMessage ?? "failed")")
             semaphore.signal()
         }
 

@@ -116,7 +116,9 @@ private let systemCollector = SystemCollector()
             object: nil,
             queue: nil
         ) { [pushScheduler] _ in
-            pushScheduler.pushOnQuit()
+            MainActor.assumeIsolated {
+                pushScheduler.pushOnQuit()
+            }
         }
 
         logger.info("All collectors started (setup complete: \(self.isSetupComplete))")

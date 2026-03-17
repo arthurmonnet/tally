@@ -3,6 +3,13 @@
 All notable changes to Tally are documented in this file.
 Format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.1.2] - 2026-03-17
+
+### Fixed
+- Resolved Swift concurrency warnings around quit-time push scheduling
+- Removed app icon catalog warning caused by an unassigned icon file
+- Removed Xcode warning about Info.plist being included in Copy Bundle Resources
+
 ## [0.1.0] - 2026-03-15
 
 Initial public release.
