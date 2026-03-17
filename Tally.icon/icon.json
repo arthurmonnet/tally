@@ -3,6 +3,7 @@
   "fill" : "system-dark",
   "groups" : [
     {
+      "blur-material" : null,
       "layers" : [
         {
           "blend-mode" : "plus-darker",
@@ -22,6 +23,7 @@
           }
         }
       ],
+      "lighting" : "combined",
       "shadow" : {
         "kind" : "neutral",
         "opacity" : 0.5
