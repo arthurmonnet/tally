@@ -7,11 +7,11 @@
     <language>en</language>
     <item>
       <title>Version 0.2.1</title>
-      <pubDate>Sat, 21 Mar 2026 19:37:36 +0000</pubDate>
+      <pubDate>Sat, 21 Mar 2026 19:42:48 +0000</pubDate>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
       <sparkle:shortVersionString>0.2.1</sparkle:shortVersionString>
       <sparkle:version>0.2.1</sparkle:version>
-      <enclosure url="https://github.com/arthurmonnet/Tally/releases/download/v0.2.1/Tally.dmg" length="3010891" type="application/octet-stream" sparkle:edSignature="2OInIViRm08PUsVd2f1F9Fs1OghTMWexFoD2lRrgJwjrazNRz/4dTkqULqurYn1lBJi3CUTc0cQCGSin5r9/Aw==" />
+      <enclosure url="https://github.com/arthurmonnet/Tally/releases/download/v0.2.1/Tally.dmg" length="3010154" type="application/octet-stream" sparkle:edSignature="AznTmalKBfUTEvnpUhcRDTw1bKDKofTldWG7u3rRVMmaUgIxaNh35kqd2DrbhaXYlTqIQOmioC/U9mueKfxkDQ==" />
     </item>
     <item>
       <title>Version 0.2.0</title>
