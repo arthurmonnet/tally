@@ -114,6 +114,53 @@ jobs:
       - name: Staple
         run: xcrun stapler staple build/Tally.dmg
 
+      - name: Download Sparkle tools
+        run: |
+          curl -sL "https://github.com/sparkle-project/Sparkle/releases/download/2.9.0/Sparkle-2.9.0.tar.xz" -o /tmp/sparkle.tar.xz
+          mkdir -p /tmp/sparkle
+          tar -xf /tmp/sparkle.tar.xz -C /tmp/sparkle
+          echo "sign_update=/tmp/sparkle/bin/sign_update" >> "$GITHUB_OUTPUT"
+        id: sparkle
+
+      - name: Sign update with Sparkle EdDSA
+        id: sign
+        env:
+          SPARKLE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+        run: |
+          # Pipe private key via stdin — never touches disk
+          OUTPUT=$(echo "$SPARKLE_KEY" | "${{ steps.sparkle.outputs.sign_update }}" build/Tally.dmg 2>&1)
+
+          # sign_update outputs: sparkle:edSignature="..." length="..."
+          SIGNATURE=$(echo "$OUTPUT" | sed -n 's/.*sparkle:edSignature="\([^"]*\)".*/\1/p')
+
+          if [ -z "$SIGNATURE" ]; then
+            echo "::error::Failed to generate EdDSA signature. Output: $OUTPUT"
+            exit 1
+          fi
+
+          echo "signature=$SIGNATURE" >> "$GITHUB_OUTPUT"
+
+          DMG_LENGTH=$(stat -f%z build/Tally.dmg)
+          echo "length=$DMG_LENGTH" >> "$GITHUB_OUTPUT"
+
+      - name: Fetch existing appcast
+        run: |
+          mkdir -p appcast
+          # Fetch existing appcast from gh-pages (if it exists) to preserve history
+          curl -sL "https://arthurmonnet.github.io/Tally/appcast.xml" -o appcast/appcast.xml 2>/dev/null || true
+          if [ ! -s appcast/appcast.xml ]; then
+            rm -f appcast/appcast.xml
+          fi
+
+      - name: Generate appcast
+        run: |
+          python3 scripts/generate_appcast.py \
+            --version "${{ steps.version.outputs.tag }}" \
+            --dmg-url "https://github.com/arthurmonnet/Tally/releases/download/${{ steps.version.outputs.tag }}/Tally.dmg" \
+            --signature "${{ steps.sign.outputs.signature }}" \
+            --length "${{ steps.sign.outputs.length }}" \
+            --output appcast/appcast.xml
+
       - name: Upload to Release
         uses: softprops/action-gh-release@v2
         with:
@@ -121,3 +168,10 @@ jobs:
           name: Tally ${{ steps.version.outputs.tag }}
           generate_release_notes: true
           files: build/Tally.dmg
+
+      - name: Deploy appcast to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./appcast
+          keep_files: true

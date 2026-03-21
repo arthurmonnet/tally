@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		C82B09332F6989490057D82A /* Tally.icon in Resources */ = {isa = PBXBuildFile; fileRef = C82B09322F6989490057D82A /* Tally.icon */; };
 		C8DDAF792F6421900021C41C /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = AA000001AAAA000000000001 /* GRDB */; };
+		BB000001BBBB000000000001 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = BB000002BBBB000000000002 /* Sparkle */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -30,6 +31,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				C8DDAF792F6421900021C41C /* GRDB in Frameworks */,
+				BB000001BBBB000000000001 /* Sparkle in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -74,6 +76,7 @@
 			name = Tally;
 			packageProductDependencies = (
 				AA000001AAAA000000000001 /* GRDB */,
+				BB000002BBBB000000000002 /* Sparkle */,
 			);
 			productName = Tally;
 			productReference = C8DDAF4D2F641EE60021C41C /* Tally.app */;
@@ -105,6 +108,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				AA000003AAAA000000000003 /* XCRemoteSwiftPackageReference "GRDB" */,
+				BB000003BBBB000000000003 /* XCRemoteSwiftPackageReference "Sparkle" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = C8DDAF4E2F641EE60021C41C /* Products */;
@@ -266,7 +270,7 @@
 				CODE_SIGN_ENTITLEMENTS = Tally/Tally.entitlements;
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = "$(MARKETING_VERSION)";
 				DEVELOPMENT_TEAM = 79F5BE6U7E;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -277,7 +281,7 @@
 				INFOPLIST_KEY_LSUIElement = YES;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 0.1.2;
+				MARKETING_VERSION = 0.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.arthurmonnet.tally;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
@@ -300,7 +304,7 @@
 				CODE_SIGN_ENTITLEMENTS = Tally/Tally.entitlements;
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = "$(MARKETING_VERSION)";
 				DEVELOPMENT_TEAM = 79F5BE6U7E;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -317,7 +321,7 @@
 				INFOPLIST_KEY_LSUIElement = YES;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 0.1.2;
+				MARKETING_VERSION = 0.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.arthurmonnet.tally;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				RUNTIME_EXCEPTION_ALLOW_DYLD_ENVIRONMENT_VARIABLES = NO;
@@ -325,7 +329,7 @@
 				RUNTIME_EXCEPTION_ALLOW_UNSIGNED_EXECUTABLE_MEMORY = NO;
 				RUNTIME_EXCEPTION_DEBUGGING_TOOL = NO;
 				RUNTIME_EXCEPTION_DISABLE_EXECUTABLE_PAGE_PROTECTION = NO;
-				RUNTIME_EXCEPTION_DISABLE_LIBRARY_VALIDATION = NO;
+				RUNTIME_EXCEPTION_DISABLE_LIBRARY_VALIDATION = YES;
 				SDKROOT = macosx;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SUPPORTED_PLATFORMS = macosx;
@@ -369,6 +373,14 @@
 				minimumVersion = 7.0.0;
 			};
 		};
+		BB000003BBBB000000000003 /* XCRemoteSwiftPackageReference "Sparkle" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sparkle-project/Sparkle";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.0.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -376,6 +388,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = AA000003AAAA000000000003 /* XCRemoteSwiftPackageReference "GRDB" */;
 			productName = GRDB;
+		};
+		BB000002BBBB000000000002 /* Sparkle */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = BB000003BBBB000000000003 /* XCRemoteSwiftPackageReference "Sparkle" */;
+			productName = Sparkle;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

@@ -4,5 +4,11 @@
 <dict>
 	<key>NSAccessibilityUsageDescription</key>
 	<string>Tally needs Accessibility permission to monitor your keyboard, mouse, and scroll activity for activity tracking.</string>
+	<key>SUFeedURL</key>
+	<string>https://arthurmonnet.github.io/Tally/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>EQIVOU6Pi5MnS3WNeNU6aEnNgXhtcbUPNHO/Fhuz2aU=</string>
+	<key>SUEnableAutomaticChecks</key>
+	<true/>
 </dict>
 </plist>

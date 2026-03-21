@@ -85,7 +85,8 @@ struct TallyApp: App {
             MenuBarView(
                 pushScheduler: delegate.appState.pushScheduler,
                 liveStats: delegate.appState.liveStats,
-                punchline: delegate.appState.punchline
+                punchline: delegate.appState.punchline,
+                updateController: delegate.appState.updateController
             )
         }
         .menuBarExtraStyle(.window)
@@ -107,6 +108,7 @@ final class AppState {
     let pushScheduler = PushScheduler()
     let liveStats = LiveStats()
     let punchline = PunchlineGenerator()
+    let updateController = UpdateController()
     private var collectorsStarted = false
 
     private let inputCollector = InputCollector()

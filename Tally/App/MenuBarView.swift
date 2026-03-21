@@ -7,6 +7,7 @@ struct MenuBarView: View {
     var pushScheduler: PushScheduler
     var liveStats: LiveStats
     var punchline: PunchlineGenerator
+    @ObservedObject var updateController: UpdateController
     @Environment(\.openWindow) private var openWindow
     @State private var stats: [String: (int: Int64, float: Double)] = [:]
     @State private var refreshTimer: Timer?
@@ -246,6 +247,17 @@ struct MenuBarView: View {
                 .padding(.top, 8)
             HStack {
                 Spacer()
+
+                Button {
+                    updateController.checkForUpdates()
+                } label: {
+                    Image(systemName: "arrow.triangle.2.circlepath")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+                .disabled(!updateController.canCheckForUpdates)
+                .help("Check for Updates")
 
                 Button {
                     NSApplication.shared.activate(ignoringOtherApps: true)
