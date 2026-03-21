@@ -127,8 +127,13 @@ jobs:
         env:
           SPARKLE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
         run: |
-          # Pipe private key via stdin — never touches disk
-          OUTPUT=$(echo "$SPARKLE_KEY" | "${{ steps.sparkle.outputs.sign_update }}" build/Tally.dmg 2>&1)
+          if [ -z "$SPARKLE_KEY" ]; then
+            echo "::error::SPARKLE_PRIVATE_KEY secret is not set"
+            exit 1
+          fi
+
+          # Pass private key via -s flag
+          OUTPUT=$("${{ steps.sparkle.outputs.sign_update }}" build/Tally.dmg -s "$SPARKLE_KEY" 2>&1)
 
           # sign_update outputs: sparkle:edSignature="..." length="..."
           SIGNATURE=$(echo "$OUTPUT" | sed -n 's/.*sparkle:edSignature="\([^"]*\)".*/\1/p')
