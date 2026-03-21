@@ -132,8 +132,8 @@ jobs:
             exit 1
           fi
 
-          # Pass private key via -s flag
-          OUTPUT=$("${{ steps.sparkle.outputs.sign_update }}" build/Tally.dmg -s "$SPARKLE_KEY" 2>&1)
+          # Pipe private key via stdin with --ed-key-file -
+          OUTPUT=$(echo "$SPARKLE_KEY" | "${{ steps.sparkle.outputs.sign_update }}" build/Tally.dmg --ed-key-file - 2>&1)
 
           # sign_update outputs: sparkle:edSignature="..." length="..."
           SIGNATURE=$(echo "$OUTPUT" | sed -n 's/.*sparkle:edSignature="\([^"]*\)".*/\1/p')
