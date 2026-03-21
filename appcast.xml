@@ -5,5 +5,13 @@
     <link>https://github.com/arthurmonnet/Tally</link>
     <description>Appcast for Tally macOS app</description>
     <language>en</language>
+    <item>
+      <title>Version 0.2.0</title>
+      <pubDate>Sat, 21 Mar 2026 17:40:11 +0000</pubDate>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <sparkle:shortVersionString>0.2.0</sparkle:shortVersionString>
+      <sparkle:version>0.2.0</sparkle:version>
+      <enclosure url="https://github.com/arthurmonnet/Tally/releases/download/v0.2.0/Tally.dmg" length="3009924" type="application/octet-stream" sparkle:edSignature="OvAR27hyi7mfR6x5Mqd6DaolgWDr5QM1h6AgWyZWQqbjmNCziqWoaPdrBQoZ6RPpGLsGQ53x5wN8PJ0lAYuwBw==" />
+    </item>
   </channel>
 </rss>
