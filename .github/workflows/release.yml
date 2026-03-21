@@ -152,7 +152,7 @@ jobs:
         run: |
           mkdir -p appcast
           # Fetch existing appcast from gh-pages (if it exists) to preserve history
-          HTTP_CODE=$(curl -sL -w "%{http_code}" "https://arthurmonnet.github.io/Tally/appcast.xml" -o appcast/appcast.xml 2>/dev/null || echo "000")
+          HTTP_CODE=$(curl -sL -w "%{http_code}" "https://arthurmonnet.github.io/tally/appcast.xml" -o appcast/appcast.xml 2>/dev/null || echo "000")
           # Remove if fetch failed, empty, or not valid XML (e.g. 404 HTML page)
           if [ "$HTTP_CODE" != "200" ] || [ ! -s appcast/appcast.xml ] || ! head -1 appcast/appcast.xml | grep -q '<?xml'; then
             rm -f appcast/appcast.xml
