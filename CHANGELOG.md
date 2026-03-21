@@ -3,6 +3,11 @@
 All notable changes to Tally are documented in this file.
 Format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.1.4] - 2026-03-21
+
+### Fixed
+- LiveStats counters now reset at midnight — previously counters accumulated across days until app restart
+
 ## [0.1.2] - 2026-03-17
 
 ### Fixed

@@ -7,6 +7,10 @@ private let logger = Logger(subsystem: "arthurmonnet.Tally", category: "LiveStat
 /// CGEventTap and FSEvent callbacks increment these immediately,
 /// so SwiftUI views always show the latest values without DB queries.
 /// The database flush timer persists deltas to SQLite independently.
+///
+/// Counters automatically reset at midnight: every increment checks
+/// whether the calendar day has changed and re-seeds from the database
+/// for the new day.
 @MainActor
 @Observable
 final class LiveStats {
@@ -24,11 +28,22 @@ final class LiveStats {
     // MARK: - File events (instant updates)
     var screenshots: Int64 = 0
 
+    /// The date string (yyyy-MM-dd) these counters belong to.
+    /// When this no longer matches the current calendar day, counters reset.
+    private var currentDate: String = ""
+
+    private static let dateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        return f
+    }()
+
     // MARK: - Seed from database
 
     /// Load today's cumulative totals from the database so counters
     /// don't start at zero on app launch.
     func seedFromDatabase() {
+        currentDate = Self.dateFormatter.string(from: Date())
         do {
             let raw = try Database.shared.todayStats()
             keystrokes = raw["keystrokes"]?.int ?? 0
@@ -46,9 +61,22 @@ final class LiveStats {
         }
     }
 
+    // MARK: - Day rollover
+
+    /// Check if the calendar day has changed and reset counters if so.
+    /// Called before every increment to ensure counters always reflect
+    /// only the current day.
+    private func resetIfNewDay() {
+        let today = Self.dateFormatter.string(from: Date())
+        guard today != currentDate else { return }
+        logger.info("Day changed from \(self.currentDate) to \(today) — resetting counters")
+        seedFromDatabase()
+    }
+
     // MARK: - Increment helpers (called from collectors)
 
     func increment(_ key: String) {
+        resetIfNewDay()
         switch key {
         case "keystrokes": keystrokes += 1
         case "clicks_left": clicksLeft += 1
@@ -63,6 +91,7 @@ final class LiveStats {
     }
 
     func addFloat(_ key: String, value: Double) {
+        resetIfNewDay()
         switch key {
         case "scroll_distance_m": scrollDistanceM += value
         case "mouse_distance_m": mouseDistanceM += value
