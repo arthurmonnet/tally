@@ -3,6 +3,11 @@
 All notable changes to Tally are documented in this file.
 Format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.2.2] - 2026-03-24
+
+### Fixed
+- Keystroke and other stat sparklines now keep today's bar in sync with the live total instead of freezing on the first loaded history value
+
 ## [0.1.4] - 2026-03-21
 
 ### Fixed

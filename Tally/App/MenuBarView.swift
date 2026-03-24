@@ -288,7 +288,8 @@ struct MenuBarView: View {
         keys: [String],
         historyKey: String
     ) -> some View {
-        let value = displayValue ?? formatNumber(liveValue ?? keys.reduce(Int64(0)) { $0 + (stats[$1]?.int ?? 0) })
+        let currentValue = liveValue ?? keys.reduce(Int64(0)) { $0 + (stats[$1]?.int ?? 0) }
+        let value = displayValue ?? formatNumber(currentValue)
         let isExpanded = expandedStat == historyKey
 
         VStack(spacing: 0) {
@@ -313,7 +314,7 @@ struct MenuBarView: View {
             }
 
             if isExpanded, let history = historyCache[historyKey] {
-                SparklineChart(history: history)
+                SparklineChart(history: reconciledHistory(history, todayValue: currentValue))
                     .padding(.horizontal, 16)
                     .padding(.vertical, 6)
                     .transition(.opacity)
@@ -381,6 +382,38 @@ struct MenuBarView: View {
                 logger.error("Failed to load history: \(error)")
             }
         }
+    }
+
+    private func reconciledHistory(_ history: StatHistory, todayValue: Int64) -> StatHistory {
+        guard !history.days.isEmpty else { return history }
+        let today = Database.shared.todayDateString()
+
+        let reconciledDays = history.days.enumerated().map { index, day in
+            guard index == history.days.count - 1, day.date == today else {
+                return day
+            }
+            return StatHistoryDay(date: day.date, value: max(day.value, todayValue))
+        }
+
+        let values = reconciledDays.map(\.value)
+        let total = values.reduce(0, +)
+        let nonZeroCount = values.filter { $0 > 0 }.count
+        let average = nonZeroCount > 0 ? Double(total) / Double(nonZeroCount) : 0
+
+        let peakDay = reconciledDays.max { lhs, rhs in
+            lhs.value < rhs.value
+        } ?? reconciledDays[0]
+
+        let latestValue = reconciledDays.last?.value ?? 0
+        let todayVsAverage = average > 0 ? (Double(latestValue) - average) / average : 0
+
+        return StatHistory(
+            keys: history.keys,
+            days: reconciledDays,
+            average: average,
+            peak: StatHistoryPeak(date: peakDay.date, value: peakDay.value),
+            todayVsAverage: todayVsAverage
+        )
     }
 
     // MARK: - Formatting
