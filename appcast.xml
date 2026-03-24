@@ -6,6 +6,14 @@
     <description>Appcast for Tally macOS app</description>
     <language>en</language>
     <item>
+      <title>Version 0.2.2</title>
+      <pubDate>Tue, 24 Mar 2026 22:58:03 +0000</pubDate>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <sparkle:shortVersionString>0.2.2</sparkle:shortVersionString>
+      <sparkle:version>0.2.2</sparkle:version>
+      <enclosure url="https://github.com/arthurmonnet/Tally/releases/download/v0.2.2/Tally.dmg" length="3011818" type="application/octet-stream" sparkle:edSignature="pL5bJPnjR1Y5YV38kp0JqBGEjEoISHVC2+cmdEZ7T4j5uBJfVJV7BvMR1k1E6mcFVFMdCtPD31fvyncIDVX2Dw==" />
+    </item>
+    <item>
       <title>Version 0.2.1</title>
       <pubDate>Sat, 21 Mar 2026 19:42:48 +0000</pubDate>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
