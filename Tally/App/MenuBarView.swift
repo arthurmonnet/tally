@@ -367,7 +367,8 @@ struct MenuBarView: View {
     // MARK: - History
 
     private func loadHistory(for keys: [String], historyKey: String, then completion: @escaping () -> Void) {
-        if historyCache[historyKey] != nil {
+        let today = Database.shared.todayDateString()
+        if let cachedHistory = historyCache[historyKey], cachedHistory.days.last?.date == today {
             completion()
             return
         }
@@ -388,11 +389,19 @@ struct MenuBarView: View {
         guard !history.days.isEmpty else { return history }
         let today = Database.shared.todayDateString()
 
-        let reconciledDays = history.days.enumerated().map { index, day in
-            guard index == history.days.count - 1, day.date == today else {
-                return day
+        var reconciledDays = history.days
+        if let lastIndex = reconciledDays.indices.last {
+            if reconciledDays[lastIndex].date == today {
+                reconciledDays[lastIndex] = StatHistoryDay(
+                    date: today,
+                    value: max(reconciledDays[lastIndex].value, todayValue)
+                )
+            } else {
+                reconciledDays.append(StatHistoryDay(date: today, value: todayValue))
+                if reconciledDays.count > 7 {
+                    reconciledDays.removeFirst(reconciledDays.count - 7)
+                }
             }
-            return StatHistoryDay(date: day.date, value: max(day.value, todayValue))
         }
 
         let values = reconciledDays.map(\.value)

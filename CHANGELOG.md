@@ -3,6 +3,11 @@
 All notable changes to Tally are documented in this file.
 Format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.2.3] - 2026-03-25
+
+### Fixed
+- The rightmost sparkline column is now always reserved for the current day after midnight rollovers, even when the menu stays open across days
+
 ## [0.2.2] - 2026-03-24
 
 ### Fixed
